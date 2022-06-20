@@ -165,15 +165,16 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
 
   // keeperId => (worker,CVP stake)
   mapping(uint256 => Keeper) internal keepers;
-  // keeperId => (admin,CVP stake)
+  // keeperId => admin
   mapping(uint256 => address) public keeperAdmins;
   // keeperId => the slashed CVP amount
   mapping(uint256 => uint256) public slashedStakeOf;
   // keeperId => native token compensation
   mapping(uint256 => uint256) public compensations;
 
-  // keeperId => pendingWithdrawalCVP
+  // keeperId => pendingWithdrawalCVP amount
   mapping(uint256 => uint256) public pendingWithdrawalAmount;
+  // keeperId => pendingWithdrawalEndsAt timestamp
   mapping(uint256 => uint256) public pendingWithdrawalEndsAt;
 
   // owner => credits
@@ -234,11 +235,11 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     }
   }
 
-  constructor(address owner_, address cvp_, uint256 minOperatorCvp_, uint256 pendingWithdrawalTimeoutSeconds_)
+  constructor(address owner_, address cvp_, uint256 minKeeperCvp_, uint256 pendingWithdrawalTimeoutSeconds_)
     ERC20("PPAgentLite Staked CVP", "paCVP")
     ERC20Permit("PPAgentLite Staked CVP")
   {
-    minKeeperCvp = minOperatorCvp_;
+    minKeeperCvp = minKeeperCvp_;
     CVP = IERC20(cvp_);
     pendingWithdrawalTimeoutSeconds = pendingWithdrawalTimeoutSeconds_;
     _transferOwnership(owner_);
@@ -562,10 +563,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     if (params_.calldataSource == CALLDATA_SOURCE_PRE_DEFINED) {
       preDefinedCalldatas[jobKey] = preDefinedCalldata_;
     } else if (params_.calldataSource == CALLDATA_SOURCE_RESOLVER) {
-      if (resolver_.resolverAddress == address(0)) {
-        revert MissingResolverAddress();
-      }
-      resolvers[jobKey] = resolver_;
+      _setJobResolver(jobKey, resolver_);
     }
     if (params_.calldataSource > 2) {
       revert InvalidCalldataSource();

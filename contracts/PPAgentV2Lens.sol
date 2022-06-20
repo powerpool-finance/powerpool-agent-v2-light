@@ -4,8 +4,8 @@ pragma solidity ^0.8.13;
 import "./PPAgentV2.sol";
 
 contract PPAgentV2Lens is PPAgentV2  {
-  constructor(address owner_, address cvp_, uint256 minOperatorCvp_, uint256 pendingWithdrawalTimeoutSeconds_)
-  PPAgentV2(owner_, cvp_, minOperatorCvp_, pendingWithdrawalTimeoutSeconds_) {
+  constructor(address owner_, address cvp_, uint256 minKeeperCvp_, uint256 pendingWithdrawalTimeoutSeconds_)
+  PPAgentV2(owner_, cvp_, minKeeperCvp_, pendingWithdrawalTimeoutSeconds_) {
   }
 
   function isJobActive(bytes32 jobKey_) external view returns (bool) {
