@@ -768,9 +768,9 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   }
 
   /**
-   * A job owner top-ups the job credits in NATIVE tokens.
+   * Top-ups the job credits in NATIVE tokens.
    *
-   * @param jobKey_ The jobKey
+   * @param jobKey_ The jobKey to deposit for
    */
   function depositJobCredits(bytes32 jobKey_) external payable {
     _assertNonZeroValue();
@@ -832,9 +832,9 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   }
 
   /**
-   * A job owner top-ups the job owner credits in NATIVE tokens.
+   * Top-ups the job owner credits in NATIVE tokens.
    *
-   * @param for_ The address to deposit for
+   * @param for_ The job owner address to deposit for
    */
   function depositJobOwnerCredits(address for_) external payable {
     _assertNonZeroValue();
@@ -942,7 +942,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   }
 
   /**
-   * A keeper deposits CVP. The beneficiary receives a derivative erc20 token in exchange of CVP.
+   * Deposits CVP for the given keeper ID. The beneficiary receives a derivative erc20 token in exchange of CVP.
    *   Accounts the staking amount on the beneficiary's stakeOf balance.
    *
    * @param keeperId_ The keeper ID
