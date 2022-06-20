@@ -4,8 +4,6 @@ pragma solidity ^0.8.13;
 contract PPAgentV2Flags {
   // Keeper pass this flags withing execute() transaction
   uint256 internal constant FLAG_CHECK_CREDITS = 0x01;
-  // uint256 internal constant FLAG_RESERVED = 0x02;
-  // uint256 internal constant FLAG_RESERVED = 0x04;
   uint256 internal constant FLAG_ACCEPT_MAX_BASE_FEE_LIMIT = 0x08;
   uint256 internal constant FLAG_ACCRUE_REWARD = 0x20;
 
