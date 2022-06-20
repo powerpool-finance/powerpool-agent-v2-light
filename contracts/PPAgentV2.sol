@@ -802,7 +802,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   }
 
   function _calculateDepositFee() internal view returns (uint256 fee, uint256 amount) {
-    fee = msg.value * feePpm / 1e6;
+    fee = msg.value * feePpm / 1e6 /* 100% in ppm */;
     amount = msg.value - fee;
   }
 
