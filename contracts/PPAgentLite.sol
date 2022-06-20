@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "./PPAgentLiteFlags.sol";
-import "../lib/forge-std/src/console.sol";
 
 library ConfigFlags {
   function check(uint256 cfg, uint256 flag) internal pure returns (bool) {
@@ -53,9 +52,7 @@ contract PPAgentLite is IPPAgentLite, PPAgentLiteFlags, Ownable, ERC20, ERC20Per
   error MissingAmount();
   error WithdrawAmountExceedsAvailable(uint256 wanted, uint256 actual);
   error JobShouldHaveInterval();
-  error JobWithPreDefinedCalldataShouldHaveInterval();
   error MissingResolverAddress();
-  error OnlyResolverCalldataSource();
   error NotSupportedByJobCalldataSource();
   error OnlyKeeperAdmin();
   error TimeoutTooBig();
@@ -100,7 +97,6 @@ contract PPAgentLite is IPPAgentLite, PPAgentLiteFlags, Ownable, ERC20, ERC20Per
   event SetJobConfig(bytes32 indexed jobKey, bool isActive_, bool useJobOwnerCredits_, bool assertResolverSelector_);
   event SetJobResolver(bytes32 indexed jobKey, address resolverAddress, bytes resolverCalldata);
   event SetJobPreDefinedCalldata(bytes32 indexed jobKey, bytes preDefinedCalldata);
-  event SetUseJobOwnerCredits(bytes32 indexed jobKey, bool useJobOwnerCredits);
   event SetAgentParams(uint256 minKeeperCvp_, uint256 timeoutSeconds_, uint256 feePct_);
   event RegisterJob(
     bytes32 indexed jobKey,
@@ -183,7 +179,8 @@ contract PPAgentLite is IPPAgentLite, PPAgentLiteFlags, Ownable, ERC20, ERC20Per
   // owner => credits
   mapping(address => uint256) public jobOwnerCredits;
 
-  // Pseudo-modifiers
+  /*** PSEUDO-MODIFIERS ***/
+
   function _assertOnlyOwner() internal view {
     if (msg.sender != owner()) {
       revert OnlyOwner();
