@@ -561,7 +561,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     jobKey = getJobKey(params_.jobAddress, jobId);
 
     if (params_.calldataSource == CALLDATA_SOURCE_PRE_DEFINED) {
-      preDefinedCalldatas[jobKey] = preDefinedCalldata_;
+      _setJobPreDefinedCalldata(jobKey, preDefinedCalldata_);
     } else if (params_.calldataSource == CALLDATA_SOURCE_RESOLVER) {
       _setJobResolver(jobKey, resolver_);
     }
@@ -709,6 +709,10 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     _assertOnlyJobOwner(jobKey_);
     _assertJobCalldataSource(jobKey_, CALLDATA_SOURCE_PRE_DEFINED);
 
+    _setJobPreDefinedCalldata(jobKey_, preDefinedCalldata_);
+  }
+
+  function _setJobPreDefinedCalldata(bytes32 jobKey_, bytes calldata preDefinedCalldata_) internal {
     preDefinedCalldatas[jobKey_] = preDefinedCalldata_;
     emit SetJobPreDefinedCalldata(jobKey_, preDefinedCalldata_);
   }
