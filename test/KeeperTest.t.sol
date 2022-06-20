@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "../contracts/PPAgentLite.sol";
+import "../contracts/PPAgentV2.sol";
 import "./mocks/MockCVP.sol";
 import "./TestHelper.sol";
 
 contract KeeperTest is TestHelper {
   MockCVP internal cvp;
-  PPAgentLite internal agent;
+  PPAgentV2 internal agent;
   uint256 internal kid;
 
   event RegisterAsKeeper(uint256 indexed keeperId, address indexed keeperAdmin, address keeperWorker);
@@ -15,7 +15,7 @@ contract KeeperTest is TestHelper {
 
   function setUp() public override {
     cvp = new MockCVP();
-    agent = new PPAgentLite(bob, address(cvp), MIN_DEPOSIT_3000_CVP, 3 days);
+    agent = new PPAgentV2(bob, address(cvp), MIN_DEPOSIT_3000_CVP, 3 days);
     cvp.transfer(keeperAdmin, 10_000 ether);
     vm.startPrank(keeperAdmin);
     cvp.approve(address(agent), MIN_DEPOSIT_3000_CVP * 2);
@@ -64,7 +64,7 @@ contract KeeperTest is TestHelper {
     vm.prank(keeperAdmin);
     cvp.approve(address(agent), MIN_DEPOSIT_3000_CVP);
 
-    vm.expectRevert(PPAgentLite.InsufficientAmount.selector);
+    vm.expectRevert(PPAgentV2.InsufficientAmount.selector);
     kid = agent.registerAsKeeper(keeperWorker, MIN_DEPOSIT_3000_CVP - 1);
   }
 
@@ -90,7 +90,7 @@ contract KeeperTest is TestHelper {
 
   function testErrWithdrawExtraCompensation() public {
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.WithdrawAmountExceedsAvailable.selector, 22 ether, 20 ether)
+      abi.encodeWithSelector(PPAgentV2.WithdrawAmountExceedsAvailable.selector, 22 ether, 20 ether)
     );
 
     vm.prank(keeperAdmin);
@@ -99,7 +99,7 @@ contract KeeperTest is TestHelper {
 
   function testErrWithdrawAnotherExtraCompensation() public {
     vm.expectRevert(abi.encodeWithSelector(
-      PPAgentLite.WithdrawAmountExceedsAvailable.selector,
+      PPAgentV2.WithdrawAmountExceedsAvailable.selector,
       21 ether,
       20 ether
     ));
@@ -110,7 +110,7 @@ contract KeeperTest is TestHelper {
 
   function testErrWithdrawZeroCompensation() public {
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.MissingAmount.selector)
+      abi.encodeWithSelector(PPAgentV2.MissingAmount.selector)
     );
 
     vm.prank(keeperAdmin);

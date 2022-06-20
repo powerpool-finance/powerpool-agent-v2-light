@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "../contracts/PPAgentLite.sol";
+import "../contracts/PPAgentV2.sol";
 import "./mocks/MockCVP.sol";
 import "./TestHelper.sol";
 
 contract StakingTest is TestHelper {
   MockCVP internal cvp;
-  PPAgentLite internal agent;
+  PPAgentV2 internal agent;
   uint256 internal kid0;
   uint256 internal kid1;
 
   function setUp() public override {
     cvp = new MockCVP();
-    agent = new PPAgentLite(owner, address(cvp), MIN_DEPOSIT_3000_CVP, 3 days);
+    agent = new PPAgentV2(owner, address(cvp), MIN_DEPOSIT_3000_CVP, 3 days);
     cvp.transfer(keeperAdmin, CVP_TOTAL_SUPPLY + MIN_DEPOSIT_3000_CVP * 2);
 
     vm.startPrank(keeperAdmin);
@@ -78,10 +78,10 @@ contract StakingTest is TestHelper {
 
     vm.startPrank(keeperAdmin);
     agent.initiateRedeem(kid1, 500 ether);
-    vm.expectRevert(abi.encodeWithSelector(PPAgentLite.WithdrawalTimoutNotReached.selector));
+    vm.expectRevert(abi.encodeWithSelector(PPAgentV2.WithdrawalTimoutNotReached.selector));
     agent.finalizeRedeem(kid1, keeperAdmin);
     vm.warp(block.timestamp + 2 days);
-    vm.expectRevert(abi.encodeWithSelector(PPAgentLite.WithdrawalTimoutNotReached.selector));
+    vm.expectRevert(abi.encodeWithSelector(PPAgentV2.WithdrawalTimoutNotReached.selector));
     agent.finalizeRedeem(kid1, keeperAdmin);
 
     assertEq(agent.balanceOf(keeperAdmin), amount + 6_000 ether - 500 ether);
@@ -121,7 +121,7 @@ contract StakingTest is TestHelper {
     // Redeem #1
     vm.startPrank(keeperAdmin);
     agent.initiateRedeem(kid1, 500 ether);
-    vm.expectRevert(abi.encodeWithSelector(PPAgentLite.WithdrawalTimoutNotReached.selector));
+    vm.expectRevert(abi.encodeWithSelector(PPAgentV2.WithdrawalTimoutNotReached.selector));
     agent.finalizeRedeem(kid1, keeperAdmin);
 
     assertEq(agent.balanceOf(keeperAdmin), 5_500 ether);
@@ -158,7 +158,7 @@ contract StakingTest is TestHelper {
     assertEq(agent.pendingWithdrawalAmount(kid1), 0);
     assertEq(agent.pendingWithdrawalEndsAt(kid1), block.timestamp - 1);
 
-    vm.expectRevert(PPAgentLite.NoPendingWithdrawal.selector);
+    vm.expectRevert(PPAgentV2.NoPendingWithdrawal.selector);
     agent.finalizeRedeem(kid1, keeperAdmin);
     vm.stopPrank();
   }
@@ -192,7 +192,7 @@ contract StakingTest is TestHelper {
     agent.transfer(keeperAdmin, 3_500 ether);
 
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.AmountGtStake.selector, 3_001 ether, 3_000 ether, 0)
+      abi.encodeWithSelector(PPAgentV2.AmountGtStake.selector, 3_001 ether, 3_000 ether, 0)
     );
     vm.prank(keeperAdmin);
     agent.initiateRedeem(kid1, 3_001 ether);
@@ -209,14 +209,14 @@ contract StakingTest is TestHelper {
 
   function testErrStakeZero() public {
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.MissingAmount.selector)
+      abi.encodeWithSelector(PPAgentV2.MissingAmount.selector)
     );
     agent.stake(kid1, keeperAdmin, 0);
   }
 
   function testErrRedeemZero() public {
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.MissingAmount.selector)
+      abi.encodeWithSelector(PPAgentV2.MissingAmount.selector)
     );
     vm.prank(keeperAdmin);
     agent.initiateRedeem(kid1, 0);

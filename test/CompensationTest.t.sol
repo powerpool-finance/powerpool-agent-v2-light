@@ -2,22 +2,22 @@
 pragma solidity ^0.8.13;
 
 import "../lib/forge-std/src/Test.sol";
-import "../contracts/PPAgentLite.sol";
-import "../contracts/PPAgentLiteFlags.sol";
+import "../contracts/PPAgentV2.sol";
+import "../contracts/PPAgentV2Flags.sol";
 import "./mocks/MockCVP.sol";
 
-contract CompensationTest is Test, PPAgentLiteFlags {
+contract CompensationTest is Test, PPAgentV2Flags {
   address internal alice = address(0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa);
   address internal bob = address(0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB);
   address internal keeper = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
   uint256 internal constant CVP_LIMIT = 100_000_000 ether;
 
   MockCVP internal cvp;
-  PPAgentLite internal agent;
+  PPAgentV2 internal agent;
 
   function setUp() public {
     cvp = new MockCVP();
-    agent = new PPAgentLite(bob, address(cvp), 3_000 ether, 3 days);
+    agent = new PPAgentV2(bob, address(cvp), 3_000 ether, 3 days);
   }
 
   function testGasCompensationPctLt100AndFixed() public {

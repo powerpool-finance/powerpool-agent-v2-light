@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "../contracts/PPAgentLite.sol";
+import "../contracts/PPAgentV2.sol";
 import "./mocks/MockCVP.sol";
 import "./TestHelper.sol";
 
@@ -10,13 +10,13 @@ contract JobOwnerTest is TestHelper {
   event WithdrawJobOwnerCredits(address indexed jobOwner, address indexed to, uint256 amount);
 
   MockCVP internal cvp;
-  PPAgentLite internal agent;
+  PPAgentV2 internal agent;
 
   function setUp() public override {
     vm.deal(alice, 100 ether);
     vm.deal(bob, 100 ether);
     cvp = new MockCVP();
-    agent = new PPAgentLite(owner, address(cvp), 3_000 ether, 3 days);
+    agent = new PPAgentV2(owner, address(cvp), 3_000 ether, 3 days);
     vm.deal(address(agent), 1000 ether);
     cvp.transfer(alice, 10_000 ether);
   }
@@ -90,7 +90,7 @@ contract JobOwnerTest is TestHelper {
 
   function testErrAddJobOwnerCreditsZeroDeposit() public {
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.MissingDeposit.selector)
+      abi.encodeWithSelector(PPAgentV2.MissingDeposit.selector)
     );
 
     vm.prank(alice);
@@ -128,7 +128,7 @@ contract JobOwnerTest is TestHelper {
 
   function testErrRemoveJobOwnerCreditsMissingAmount() public {
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.MissingAmount.selector)
+      abi.encodeWithSelector(PPAgentV2.MissingAmount.selector)
     );
 
     vm.prank(alice);
@@ -140,7 +140,7 @@ contract JobOwnerTest is TestHelper {
     agent.depositJobOwnerCredits{ value: 10 ether}(alice);
 
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.CreditsWithdrawalUnderflow.selector)
+      abi.encodeWithSelector(PPAgentV2.CreditsWithdrawalUnderflow.selector)
     );
 
     vm.prank(alice);

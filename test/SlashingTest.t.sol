@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "../contracts/PPAgentLite.sol";
+import "../contracts/PPAgentV2.sol";
 import "./mocks/MockCVP.sol";
 import "./TestHelper.sol";
 
 contract StakingTest is TestHelper {
   MockCVP internal cvp;
-  PPAgentLite internal agent;
+  PPAgentV2 internal agent;
   uint256 internal kid;
 
   function setUp() public override {
     cvp = new MockCVP();
-    agent = new PPAgentLite(owner, address(cvp), MIN_DEPOSIT_3000_CVP, 3 days);
+    agent = new PPAgentV2(owner, address(cvp), MIN_DEPOSIT_3000_CVP, 3 days);
     cvp.transfer(keeperAdmin, 16_000 ether);
     vm.startPrank(keeperAdmin);
     cvp.approve(address(agent), MIN_DEPOSIT_3000_CVP * 2);
@@ -22,13 +22,13 @@ contract StakingTest is TestHelper {
   }
 
   function testErrSlashNotOwner() public {
-    vm.expectRevert(PPAgentLite.OnlyOwner.selector);
+    vm.expectRevert(PPAgentV2.OnlyOwner.selector);
     agent.slash(kid, bob, 1);
   }
 
   function testErrSlashZeroAmount() public {
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.MissingAmount.selector)
+      abi.encodeWithSelector(PPAgentV2.MissingAmount.selector)
     );
     vm.prank(owner);
     agent.slash(kid, bob, 0);
@@ -65,7 +65,7 @@ contract StakingTest is TestHelper {
 
     // Wont burn
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.InsufficientAmountToCoverSlashedStake.selector, 499 ether, 500 ether)
+      abi.encodeWithSelector(PPAgentV2.InsufficientAmountToCoverSlashedStake.selector, 499 ether, 500 ether)
     );
     vm.prank(keeperAdmin);
     agent.initiateRedeem(kid, 499 ether);
@@ -86,7 +86,7 @@ contract StakingTest is TestHelper {
 
     vm.warp(block.timestamp + 3 days + 1);
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.NoPendingWithdrawal.selector)
+      abi.encodeWithSelector(PPAgentV2.NoPendingWithdrawal.selector)
     );
     vm.prank(keeperAdmin);
     agent.finalizeRedeem(kid, keeperAdmin);
@@ -124,7 +124,7 @@ contract StakingTest is TestHelper {
 
     // Wont burn
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.InsufficientAmountToCoverSlashedStake.selector, 2_999 ether, 3_000 ether)
+      abi.encodeWithSelector(PPAgentV2.InsufficientAmountToCoverSlashedStake.selector, 2_999 ether, 3_000 ether)
     );
     vm.prank(keeperAdmin);
     agent.initiateRedeem(kid, 2_999 ether);
@@ -145,7 +145,7 @@ contract StakingTest is TestHelper {
 
     vm.warp(block.timestamp + 3 days + 1);
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.NoPendingWithdrawal.selector)
+      abi.encodeWithSelector(PPAgentV2.NoPendingWithdrawal.selector)
     );
     vm.prank(keeperAdmin);
     agent.finalizeRedeem(kid, keeperAdmin);

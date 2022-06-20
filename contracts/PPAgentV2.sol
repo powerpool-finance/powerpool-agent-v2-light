@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
-import "./PPAgentLiteFlags.sol";
+import "./PPAgentV2Flags.sol";
 
 library ConfigFlags {
   function check(uint256 cfg, uint256 flag) internal pure returns (bool) {
@@ -13,7 +13,7 @@ library ConfigFlags {
   }
 }
 
-interface IPPAgentLite {
+interface IPPAgentV2 {
   function execute_44g58pv() external;
 }
 
@@ -21,7 +21,7 @@ interface IPPAgentLite {
  * @title PowerAgentLite
  * @author PowerPool
  */
-contract PPAgentLite is IPPAgentLite, PPAgentLiteFlags, Ownable, ERC20, ERC20Permit  {
+contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   error OnlyOwner();
   error NonEOASender();
   error InsufficientKeeperStake();

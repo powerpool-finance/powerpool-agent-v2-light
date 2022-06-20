@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "../contracts/PPAgentLite.sol";
+import "../contracts/PPAgentV2.sol";
 import "./mocks/MockCVP.sol";
 import "./TestHelper.sol";
 import "./jobs/NoCalldataTestJob.sol";
@@ -12,7 +12,7 @@ import "../lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 
 contract ExecutePDCalldataTest is TestHelper {
   MockCVP internal cvp;
-  PPAgentLite internal agent;
+  PPAgentV2 internal agent;
   ICounter internal job;
 
   bytes32 internal jobKey;
@@ -27,7 +27,7 @@ contract ExecutePDCalldataTest is TestHelper {
       accrueReward: false
     });
     cvp = new MockCVP();
-    agent = new PPAgentLite(bob, address(cvp), 3_000 ether, 3 days);
+    agent = new PPAgentV2(bob, address(cvp), 3_000 ether, 3 days);
 
     {
       cvp.transfer(keeperAdmin, 5_000 ether);
@@ -39,11 +39,11 @@ contract ExecutePDCalldataTest is TestHelper {
   }
 
   function _setupJob(address job_, bytes memory preDefinedCalldata_) internal {
-    PPAgentLite.Resolver memory resolver = PPAgentLite.Resolver({
+    PPAgentV2.Resolver memory resolver = PPAgentV2.Resolver({
       resolverAddress: address(0),
       resolverCalldata: new bytes(0)
     });
-    PPAgentLite.RegisterJobParams memory params = PPAgentLite.RegisterJobParams({
+    PPAgentV2.RegisterJobParams memory params = PPAgentV2.RegisterJobParams({
       jobAddress: job_,
       jobSelector: NON_ZERO_SELECTOR,
       jobOwner: alice,

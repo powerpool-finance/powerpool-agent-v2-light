@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "../contracts/PPAgentLiteFlags.sol";
+import "../contracts/PPAgentV2Flags.sol";
 import "../lib/forge-std/src/Test.sol";
-import "../contracts/PPAgentLite.sol";
+import "../contracts/PPAgentV2.sol";
 
-contract TestHelper is Test, PPAgentLiteFlags {
+contract TestHelper is Test, PPAgentV2Flags {
   address constant internal owner = address(0x8888888888888888888888888888888888888888);
   address constant internal slasher = address(0x9999999999999999999999999999999999999999);
 
@@ -40,7 +40,7 @@ contract TestHelper is Test, PPAgentLiteFlags {
   }
 
   function _callExecuteHelper(
-    IPPAgentLite agent_,
+    IPPAgentV2 agent_,
     address jobAddress_,
     uint256 jobId_,
     uint256 cfg_,

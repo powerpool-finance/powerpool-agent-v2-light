@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "../contracts/PPAgentLite.sol";
+import "../contracts/PPAgentV2.sol";
 import "./mocks/MockCVP.sol";
 import "./TestHelper.sol";
 
 contract AgentOwnerTest is TestHelper {
   MockCVP internal cvp;
-  PPAgentLite internal agent;
+  PPAgentV2 internal agent;
   uint256 internal kid;
 
   event SetAgentParams(uint256 minKeeperCvp_, uint256 timeoutSeconds_, uint256 feePct_);
@@ -15,7 +15,7 @@ contract AgentOwnerTest is TestHelper {
 
   function setUp() public override {
     cvp = new MockCVP();
-    agent = new PPAgentLite(owner, address(cvp), MIN_DEPOSIT_3000_CVP, 3 days);
+    agent = new PPAgentV2(owner, address(cvp), MIN_DEPOSIT_3000_CVP, 3 days);
   }
 
   function testOwnerAssignedCorrectly() public {
@@ -36,7 +36,7 @@ contract AgentOwnerTest is TestHelper {
   }
 
   function testErrSetAgentParamsNotOwner() public {
-    vm.expectRevert(PPAgentLite.OnlyOwner.selector);
+    vm.expectRevert(PPAgentV2.OnlyOwner.selector);
     agent.setAgentParams(type(uint256).max, 30 days, 1.5e4);
   }
 
@@ -47,13 +47,13 @@ contract AgentOwnerTest is TestHelper {
   }
 
   function testErrSetPendingWithdrawalTimeoutTooBig() public {
-    vm.expectRevert(PPAgentLite.TimeoutTooBig.selector);
+    vm.expectRevert(PPAgentV2.TimeoutTooBig.selector);
     vm.prank(owner);
     agent.setAgentParams(2, 30 days + 1, 2);
   }
 
   function testErrSetFeeTooBig() public {
-    vm.expectRevert(PPAgentLite.FeeTooBig.selector);
+    vm.expectRevert(PPAgentV2.FeeTooBig.selector);
     vm.prank(owner);
     agent.setAgentParams(2, 30 days, 5e4+1);
   }
@@ -79,7 +79,7 @@ contract AgentOwnerTest is TestHelper {
   }
 
   function testErrWithdrawFeesNotOwner() public {
-    vm.expectRevert(PPAgentLite.OnlyOwner.selector);
+    vm.expectRevert(PPAgentV2.OnlyOwner.selector);
     agent.withdrawFees(bob);
   }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-contract PPAgentLiteFlags {
+contract PPAgentV2Flags {
   // Keeper pass this flags withing execute() transaction
   uint256 internal constant FLAG_CHECK_CREDITS = 0x01;
   // uint256 internal constant FLAG_RESERVED = 0x02;

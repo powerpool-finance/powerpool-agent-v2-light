@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "../contracts/PPAgentLite.sol";
+import "../contracts/PPAgentV2.sol";
 import "./jobs/OnlySelectorTestJob.sol";
 import "./mocks/MockCVP.sol";
 import "./TestHelper.sol";
@@ -11,7 +11,7 @@ contract ExecuteSelectorTest is TestHelper {
   event Execute(bytes32 indexed jobKey, address indexed job, bool indexed success, uint256 gasUsed, uint256 baseFee, uint256 gasPrice, uint256 compensation);
 
   MockCVP internal cvp;
-  PPAgentLite internal agent;
+  PPAgentV2 internal agent;
   OnlySelectorTestJob internal counter;
 
   bytes32 internal jobKey;
@@ -32,14 +32,14 @@ contract ExecuteSelectorTest is TestHelper {
       accrueReward: true
     });
     cvp = new MockCVP();
-    agent = new PPAgentLite(owner, address(cvp), 3_000 ether, 3 days);
+    agent = new PPAgentV2(owner, address(cvp), 3_000 ether, 3 days);
     counter = new OnlySelectorTestJob(address(agent));
 
-    PPAgentLite.Resolver memory resolver = PPAgentLite.Resolver({
+    PPAgentV2.Resolver memory resolver = PPAgentV2.Resolver({
       resolverAddress: address(counter),
       resolverCalldata: new bytes(0)
     });
-    PPAgentLite.RegisterJobParams memory params = PPAgentLite.RegisterJobParams({
+    PPAgentV2.RegisterJobParams memory params = PPAgentV2.RegisterJobParams({
       jobAddress: address(counter),
       jobSelector: OnlySelectorTestJob.increment.selector,
       jobOwner: alice,
@@ -94,7 +94,7 @@ contract ExecuteSelectorTest is TestHelper {
     assertEq(agent.minKeeperCvp(), 5_001 ether);
     assertEq(agent.stakeOf(kid), 5_000 ether);
 
-    vm.expectRevert(PPAgentLite.InsufficientKeeperStake.selector);
+    vm.expectRevert(PPAgentV2.InsufficientKeeperStake.selector);
 
     vm.prank(keeperWorker, keeperWorker);
     _callExecuteHelper(
@@ -115,7 +115,7 @@ contract ExecuteSelectorTest is TestHelper {
     assertEq(agent.stakeOf(kid), 5_000 ether);
     assertEq(agent.jobMinKeeperCvp(jobKey), 5001 ether);
 
-    vm.expectRevert(PPAgentLite.InsufficientJobScopedKeeperStake.selector);
+    vm.expectRevert(PPAgentV2.InsufficientJobScopedKeeperStake.selector);
 
     vm.prank(keeperWorker, keeperWorker);
     _callExecuteHelper(
@@ -133,7 +133,7 @@ contract ExecuteSelectorTest is TestHelper {
     agent.setJobConfig(jobKey, false, false, false);
 
     vm.expectRevert(abi.encodeWithSelector(
-        PPAgentLite.InactiveJob.selector,
+        PPAgentV2.InactiveJob.selector,
         jobKey
       ));
 
@@ -164,7 +164,7 @@ contract ExecuteSelectorTest is TestHelper {
 
     vm.warp(block.timestamp + 3);
     vm.expectRevert(abi.encodeWithSelector(
-        PPAgentLite.IntervalNotReached.selector,
+        PPAgentV2.IntervalNotReached.selector,
         1600000000,
         10,
         1600000003
@@ -203,7 +203,7 @@ contract ExecuteSelectorTest is TestHelper {
       accrueReward: true
     });
     vm.expectRevert(abi.encodeWithSelector(
-        PPAgentLite.BaseFeeGtGasPrice.selector,
+        PPAgentV2.BaseFeeGtGasPrice.selector,
         101 gwei,
         100 gwei
       ));
@@ -219,7 +219,7 @@ contract ExecuteSelectorTest is TestHelper {
   }
 
   function testErrNotEOA() public {
-    vm.expectRevert(PPAgentLite.NonEOASender.selector);
+    vm.expectRevert(PPAgentV2.NonEOASender.selector);
     vm.prank(keeperWorker, bob);
     _callExecuteHelper(
       agent,
@@ -365,7 +365,7 @@ contract ExecuteSelectorTest is TestHelper {
     assertEq(agent.getJob(jobKey).credits, 0.0001 ether);
 
     // TODO: assert only revert+error selector
-    // vm.expectRevert(abi.encodeWithSelector(PPAgentLite.InsufficientJobCredits.selector))
+    // vm.expectRevert(abi.encodeWithSelector(PPAgentV2.InsufficientJobCredits.selector))
     vm.prank(keeperWorker, keeperWorker);
     _callExecuteHelper(
       agent,
@@ -383,7 +383,7 @@ contract ExecuteSelectorTest is TestHelper {
     agent.setJobConfig(jobKey, true, true, false);
 
     // TODO: assert only revert+error selector
-    // vm.expectRevert(abi.encodeWithSelector(PPAgentLite.InsufficientJobOwnerCredits.selector))
+    // vm.expectRevert(abi.encodeWithSelector(PPAgentV2.InsufficientJobOwnerCredits.selector))
     vm.prank(keeperWorker, keeperWorker);
     _callExecuteHelper(
       agent,

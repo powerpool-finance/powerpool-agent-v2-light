@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "../contracts/PPAgentLite.sol";
+import "../contracts/PPAgentV2.sol";
 import "./mocks/MockCVP.sol";
 import "./TestHelper.sol";
 import "./jobs/IntervalResolverSimpleCalldataJob.sol";
@@ -13,7 +13,7 @@ import "./jobs/SimpleCalldataIntervalTestJob.sol";
 
 contract ExecuteResolverTest is TestHelper {
   MockCVP internal cvp;
-  PPAgentLite internal agent;
+  PPAgentV2 internal agent;
   ICounter internal job;
 
   bytes32 internal jobKey;
@@ -28,7 +28,7 @@ contract ExecuteResolverTest is TestHelper {
       accrueReward: false
     });
     cvp = new MockCVP();
-    agent = new PPAgentLite(bob, address(cvp), 3_000 ether, 3 days);
+    agent = new PPAgentV2(bob, address(cvp), 3_000 ether, 3 days);
 
     {
       cvp.transfer(keeperAdmin, 10_000 ether);
@@ -42,11 +42,11 @@ contract ExecuteResolverTest is TestHelper {
   }
 
   function _setupJob(address job_, bytes4 selector_, bool assertSelector_) internal {
-    PPAgentLite.Resolver memory resolver = PPAgentLite.Resolver({
+    PPAgentV2.Resolver memory resolver = PPAgentV2.Resolver({
       resolverAddress: job_,
       resolverCalldata: abi.encode("myPass")
     });
-    PPAgentLite.RegisterJobParams memory params = PPAgentLite.RegisterJobParams({
+    PPAgentV2.RegisterJobParams memory params = PPAgentV2.RegisterJobParams({
       jobAddress: job_,
       jobSelector: selector_,
       jobOwner: alice,
@@ -156,7 +156,7 @@ contract ExecuteResolverTest is TestHelper {
     (bool ok, bytes memory cd) = job.myResolver("myPass");
     assertEq(ok, true);
 
-    vm.expectRevert(0x84fb8275/*PPAgentLite.SelectorCheckFailed.selector*/);
+    vm.expectRevert(0x84fb8275/*PPAgentV2.SelectorCheckFailed.selector*/);
     vm.prank(keeperWorker, keeperWorker);
     _callExecuteHelper(
       agent,
@@ -208,7 +208,7 @@ contract ExecuteResolverTest is TestHelper {
     (bool ok, bytes memory cd) = job.myResolver("myPass");
     assertEq(ok, true);
 
-    vm.expectRevert(0x84fb8275/*PPAgentLite.SelectorCheckFailed.selector*/);
+    vm.expectRevert(0x84fb8275/*PPAgentV2.SelectorCheckFailed.selector*/);
     vm.prank(keeperWorker, keeperWorker);
     _callExecuteHelper(
       agent,
@@ -260,7 +260,7 @@ contract ExecuteResolverTest is TestHelper {
     (bool ok, bytes memory cd) = job.myResolver("myPass");
     assertEq(ok, true);
 
-    vm.expectRevert(0x84fb8275/*PPAgentLite.SelectorCheckFailed.selector*/);
+    vm.expectRevert(0x84fb8275/*PPAgentV2.SelectorCheckFailed.selector*/);
     vm.prank(keeperWorker, keeperWorker);
     _callExecuteHelper(
       agent,

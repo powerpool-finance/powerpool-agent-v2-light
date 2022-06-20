@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "../contracts/PPAgentLite.sol";
+import "../contracts/PPAgentV2.sol";
 import "./mocks/MockCVP.sol";
 import "../contracts/jobs/CounterJob.sol";
 import "../lib/forge-std/src/console.sol";
 import "./TestHelper.sol";
-import "../contracts/PPAgentLiteLens.sol";
+import "../contracts/PPAgentV2Lens.sol";
 
 contract RegisterJob is TestHelper {
   address internal job1 = address(0x1111111111111111111111111111111111111111);
@@ -14,26 +14,26 @@ contract RegisterJob is TestHelper {
   address internal job3 = address(0x3333333333333333333333333333333333333333);
 
   MockCVP internal cvp;
-  PPAgentLite internal agent;
-  PPAgentLiteLens internal lens;
+  PPAgentV2 internal agent;
+  PPAgentV2Lens internal lens;
   CounterJob internal counter;
 
-  PPAgentLite.RegisterJobParams internal params1;
-  PPAgentLite.RegisterJobParams internal params2;
-  PPAgentLite.RegisterJobParams internal params3;
-  PPAgentLite.Resolver internal emptyResolver;
-  PPAgentLite.Resolver internal resolver1;
+  PPAgentV2.RegisterJobParams internal params1;
+  PPAgentV2.RegisterJobParams internal params2;
+  PPAgentV2.RegisterJobParams internal params3;
+  PPAgentV2.Resolver internal emptyResolver;
+  PPAgentV2.Resolver internal resolver1;
 
   function setUp() public override {
     cvp = new MockCVP();
-    agent = new PPAgentLite(owner, address(cvp), 3_000 ether, 3 days);
-    lens = new PPAgentLiteLens(owner, address(cvp), 3_000 ether, 3 days);
+    agent = new PPAgentV2(owner, address(cvp), 3_000 ether, 3 days);
+    lens = new PPAgentV2Lens(owner, address(cvp), 3_000 ether, 3 days);
     cvp.transfer(alice, 10_000 ether);
     address[] memory agents = new address[](1);
     agents[0] = address(agent);
     counter = new CounterJob(agents);
 
-    params1 = PPAgentLite.RegisterJobParams({
+    params1 = PPAgentV2.RegisterJobParams({
       jobAddress: job1,
       jobSelector: CounterJob.increment.selector,
       jobOwner: bob,
@@ -48,7 +48,7 @@ contract RegisterJob is TestHelper {
       calldataSource: CALLDATA_SOURCE_SELECTOR,
       intervalSeconds: 10
     });
-    params2 = PPAgentLite.RegisterJobParams({
+    params2 = PPAgentV2.RegisterJobParams({
       jobAddress: job2,
       jobSelector: CounterJob.increment.selector,
       jobOwner: bob,
@@ -63,7 +63,7 @@ contract RegisterJob is TestHelper {
       calldataSource: CALLDATA_SOURCE_PRE_DEFINED,
       intervalSeconds: 180 days
     });
-    params3 = PPAgentLite.RegisterJobParams({
+    params3 = PPAgentV2.RegisterJobParams({
       jobAddress: job3,
       jobSelector: CounterJob.increment.selector,
       jobOwner: bob,
@@ -78,11 +78,11 @@ contract RegisterJob is TestHelper {
       calldataSource: CALLDATA_SOURCE_RESOLVER,
       intervalSeconds: 0
     });
-    emptyResolver = PPAgentLite.Resolver({
+    emptyResolver = PPAgentV2.Resolver({
       resolverAddress: address(0),
       resolverCalldata: new bytes(0)
     });
-    resolver1 = PPAgentLite.Resolver({
+    resolver1 = PPAgentV2.Resolver({
       resolverAddress: job1,
       resolverCalldata: hex"313373"
     });
@@ -164,12 +164,12 @@ contract RegisterJob is TestHelper {
     });
 
     (bool ok, bytes memory result) = address(agent).staticcall(
-      abi.encodeWithSelector(PPAgentLite.getJob.selector, jobKey)
+      abi.encodeWithSelector(PPAgentV2.getJob.selector, jobKey)
     );
     assertEq(ok, true);
     assertEq(result.length, 288);
 
-    PPAgentLite.Job memory job = agent.getJob(jobKey);
+    PPAgentV2.Job memory job = agent.getJob(jobKey);
     assertEq(job.selector, CounterJob.increment.selector);
     assertEq(job.credits, 0);
     assertEq(job.maxBaseFeeGwei, 100);
@@ -196,11 +196,11 @@ contract RegisterJob is TestHelper {
   }
 
   function testErrJobWithSelectorMissingInterval() public {
-    PPAgentLite.RegisterJobParams memory params = params1;
+    PPAgentV2.RegisterJobParams memory params = params1;
     params.intervalSeconds = 0;
 
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.JobShouldHaveInterval.selector)
+      abi.encodeWithSelector(PPAgentV2.JobShouldHaveInterval.selector)
     );
     agent.registerJob({
       params_: params,
@@ -210,11 +210,11 @@ contract RegisterJob is TestHelper {
   }
 
   function testErrJobWithSelectorMissingAddress() public {
-    PPAgentLite.RegisterJobParams memory params = params1;
+    PPAgentV2.RegisterJobParams memory params = params1;
     params.jobAddress = address(0);
 
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.MissingJobAddress.selector)
+      abi.encodeWithSelector(PPAgentV2.MissingJobAddress.selector)
     );
     agent.registerJob({
       params_: params,
@@ -224,11 +224,11 @@ contract RegisterJob is TestHelper {
   }
 
   function testErrJobWithSelectorMissingMaxGasFee() public {
-    PPAgentLite.RegisterJobParams memory params = params1;
+    PPAgentV2.RegisterJobParams memory params = params1;
     params.maxBaseFeeGwei = 0;
 
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.MissingMaxBaseFeeGwei.selector)
+      abi.encodeWithSelector(PPAgentV2.MissingMaxBaseFeeGwei.selector)
     );
     agent.registerJob({
       params_: params,
@@ -238,7 +238,7 @@ contract RegisterJob is TestHelper {
   }
 
   function testJobWithSelectorNoFixedReward() public {
-    PPAgentLite.RegisterJobParams memory params = params1;
+    PPAgentV2.RegisterJobParams memory params = params1;
     params.fixedReward = 0;
 
     (bytes32 jobKey,) = agent.registerJob({
@@ -247,18 +247,18 @@ contract RegisterJob is TestHelper {
       preDefinedCalldata_: new bytes(0)
     });
 
-    PPAgentLite.Job memory job = agent.getJob(jobKey);
+    PPAgentV2.Job memory job = agent.getJob(jobKey);
     assertEq(lens.isJobActivePure(agent.getJobRaw(jobKey)), true);
     assertEq(job.fixedReward, 0);
   }
 
   function testErrJobWithSelectorNoFixedNorPremium() public {
-    PPAgentLite.RegisterJobParams memory params = params1;
+    PPAgentV2.RegisterJobParams memory params = params1;
     params.fixedReward = 0;
     params.rewardPct = 0;
 
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.NoFixedNorPremiumPctReward.selector)
+      abi.encodeWithSelector(PPAgentV2.NoFixedNorPremiumPctReward.selector)
     );
     agent.registerJob({
       params_: params,
@@ -268,11 +268,11 @@ contract RegisterJob is TestHelper {
   }
 
   function testErrJobInvalidCalldataSource() public {
-    PPAgentLite.RegisterJobParams memory params = params1;
+    PPAgentV2.RegisterJobParams memory params = params1;
     params.calldataSource = 3;
 
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.InvalidCalldataSource.selector)
+      abi.encodeWithSelector(PPAgentV2.InvalidCalldataSource.selector)
     );
     agent.registerJob({
       params_: params,
@@ -284,7 +284,7 @@ contract RegisterJob is TestHelper {
   // PRE-DEFINED CALLDATA
 
   function testJobWithPDCalldata() public {
-    PPAgentLite.RegisterJobParams memory params = params2;
+    PPAgentV2.RegisterJobParams memory params = params2;
 
     (bytes32 jobKey,) = agent.registerJob({
       params_: params,
@@ -294,7 +294,7 @@ contract RegisterJob is TestHelper {
 
     assertEq(agent.preDefinedCalldatas(jobKey), hex"313373");
 
-    PPAgentLite.Job memory job = agent.getJob(jobKey);
+    PPAgentV2.Job memory job = agent.getJob(jobKey);
     assertEq(lens.isJobActivePure(agent.getJobRaw(jobKey)), true);
     assertEq(job.calldataSource, CALLDATA_SOURCE_PRE_DEFINED);
 
@@ -311,7 +311,7 @@ contract RegisterJob is TestHelper {
       preDefinedCalldata_: hex"313373"
     });
 
-    PPAgentLite.Job memory job = agent.getJob(jobKey);
+    PPAgentV2.Job memory job = agent.getJob(jobKey);
 
     (
       bool isActive,
@@ -327,11 +327,11 @@ contract RegisterJob is TestHelper {
   }
 
   function testErrJobWithPDCalldataMissingInterval() public {
-    PPAgentLite.RegisterJobParams memory params = params2;
+    PPAgentV2.RegisterJobParams memory params = params2;
     params.intervalSeconds = 0;
 
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.JobShouldHaveInterval.selector)
+      abi.encodeWithSelector(PPAgentV2.JobShouldHaveInterval.selector)
     );
     agent.registerJob({
       params_: params,
@@ -343,7 +343,7 @@ contract RegisterJob is TestHelper {
   // RESOLVER
 
   function testJobWithResolverNoInterval() public {
-    PPAgentLite.RegisterJobParams memory params = params3;
+    PPAgentV2.RegisterJobParams memory params = params3;
 
     (bytes32 jobKey,) = agent.registerJob({
       params_: params,
@@ -353,7 +353,7 @@ contract RegisterJob is TestHelper {
 
     assertEq(agent.preDefinedCalldatas(jobKey), new bytes(0));
 
-    PPAgentLite.Job memory job = agent.getJob(jobKey);
+    PPAgentV2.Job memory job = agent.getJob(jobKey);
     assertEq(job.selector, bytes4(0xd09de08a));
     assertEq(job.intervalSeconds, 0);
     assertEq(job.calldataSource, CALLDATA_SOURCE_RESOLVER);
@@ -370,7 +370,7 @@ contract RegisterJob is TestHelper {
     assertEq(checkKeeperMinCvpDeposit, false);
     assertEq(lens.isJobActivePure(agent.getJobRaw(jobKey)), true);
 
-    PPAgentLite.Resolver memory res = agent.getResolver(jobKey);
+    PPAgentV2.Resolver memory res = agent.getResolver(jobKey);
     assertEq(res.resolverAddress, job1);
     assertEq(res.resolverCalldata, hex"313373");
 
@@ -381,7 +381,7 @@ contract RegisterJob is TestHelper {
   }
 
   function testJobWithResolverWithInterval() public {
-    PPAgentLite.RegisterJobParams memory params = params3;
+    PPAgentV2.RegisterJobParams memory params = params3;
     params.intervalSeconds = 1_000;
 
     (bytes32 jobKey,) = agent.registerJob({
@@ -390,7 +390,7 @@ contract RegisterJob is TestHelper {
       preDefinedCalldata_: hex"313373"
     });
 
-    PPAgentLite.Job memory job = agent.getJob(jobKey);
+    PPAgentV2.Job memory job = agent.getJob(jobKey);
     assertEq(lens.isJobActivePure(agent.getJobRaw(jobKey)), true);
     assertEq(job.selector, bytes4(0xd09de08a));
     assertEq(job.intervalSeconds, 1_000);
@@ -398,12 +398,12 @@ contract RegisterJob is TestHelper {
   }
 
   function testErrJobWithResolverMissingAddress() public {
-    PPAgentLite.RegisterJobParams memory params = params3;
-    PPAgentLite.Resolver memory resolver = resolver1;
+    PPAgentV2.RegisterJobParams memory params = params3;
+    PPAgentV2.Resolver memory resolver = resolver1;
     resolver.resolverAddress = address(0);
 
     vm.expectRevert(
-      abi.encodeWithSelector(PPAgentLite.MissingResolverAddress.selector)
+      abi.encodeWithSelector(PPAgentV2.MissingResolverAddress.selector)
     );
     agent.registerJob({
       params_: params,
@@ -415,7 +415,7 @@ contract RegisterJob is TestHelper {
   // CREDITS
 
   function testShouldAllowDepositToTheJobBalanceNoFee() public {
-    PPAgentLite.RegisterJobParams memory params = params1;
+    PPAgentV2.RegisterJobParams memory params = params1;
     params.useJobOwnerCredits = false;
 
     (bytes32 jobKey,) = agent.registerJob{ value: 1.5 ether }({
@@ -424,7 +424,7 @@ contract RegisterJob is TestHelper {
       preDefinedCalldata_: new bytes(0)
     });
 
-    PPAgentLite.Job memory job = agent.getJob(jobKey);
+    PPAgentV2.Job memory job = agent.getJob(jobKey);
     assertEq(job.credits, 1.5 ether);
     assertEq(agent.jobOwnerCredits(params.jobOwner), 0);
   }
@@ -433,7 +433,7 @@ contract RegisterJob is TestHelper {
     vm.prank(owner);
     agent.setAgentParams(3_000 ether, 30 days, 4e4);
 
-    PPAgentLite.RegisterJobParams memory params = params1;
+    PPAgentV2.RegisterJobParams memory params = params1;
     params.useJobOwnerCredits = false;
 
     (bytes32 jobKey,) = agent.registerJob{ value: 10 ether }({
@@ -447,7 +447,7 @@ contract RegisterJob is TestHelper {
   }
 
   function testShouldAllowDepositToTheOwnerBalanceNoFee() public {
-    PPAgentLite.RegisterJobParams memory params = params1;
+    PPAgentV2.RegisterJobParams memory params = params1;
     params.useJobOwnerCredits = true;
 
     (bytes32 jobKey,) = agent.registerJob{ value: 1.5 ether }({
@@ -456,7 +456,7 @@ contract RegisterJob is TestHelper {
       preDefinedCalldata_: new bytes(0)
     });
 
-    PPAgentLite.Job memory job = agent.getJob(jobKey);
+    PPAgentV2.Job memory job = agent.getJob(jobKey);
     assertEq(job.credits, 0);
     assertEq(agent.jobOwnerCredits(params.jobOwner), 1.5 ether);
   }
@@ -465,7 +465,7 @@ contract RegisterJob is TestHelper {
     vm.prank(owner);
     agent.setAgentParams(3_000 ether, 30 days, 4e4);
 
-    PPAgentLite.RegisterJobParams memory params = params1;
+    PPAgentV2.RegisterJobParams memory params = params1;
     params.useJobOwnerCredits = true;
 
     (bytes32 jobKey,) = agent.registerJob{ value: 10 ether }({
@@ -480,10 +480,10 @@ contract RegisterJob is TestHelper {
   }
 
   function testErrDepositToTheJobBalanceOverflow() public {
-    PPAgentLite.RegisterJobParams memory params = params1;
+    PPAgentV2.RegisterJobParams memory params = params1;
     params.useJobOwnerCredits = false;
 
-    vm.expectRevert(PPAgentLite.CreditsDepositOverflow.selector);
+    vm.expectRevert(PPAgentV2.CreditsDepositOverflow.selector);
     vm.deal(alice, type(uint256).max);
     vm.prank(alice);
     agent.registerJob{ value: uint256(type(uint96).max) + 1 }({
@@ -494,10 +494,10 @@ contract RegisterJob is TestHelper {
   }
 
   function testErrDepositToTheOwnerBalanceOverflow() public {
-    PPAgentLite.RegisterJobParams memory params = params1;
+    PPAgentV2.RegisterJobParams memory params = params1;
     params.useJobOwnerCredits = true;
 
-    vm.expectRevert(PPAgentLite.CreditsDepositOverflow.selector);
+    vm.expectRevert(PPAgentV2.CreditsDepositOverflow.selector);
     vm.deal(alice, type(uint256).max);
     vm.prank(alice);
     agent.registerJob{ value: uint256(type(uint96).max) + 1 }({
