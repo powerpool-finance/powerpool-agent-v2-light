@@ -218,6 +218,66 @@ contract ExecuteSelectorTest is TestHelper {
     );
   }
 
+  function testAcceptBaseFeeGtGasPrice() public {
+    vm.fee(500 gwei);
+    assertEq(block.basefee, 500 gwei);
+    assertEq(agent.getJob(jobKey).maxBaseFeeGwei, 100);
+    uint256 flags = _config({
+      checkCredits: true,
+      acceptMaxBaseFeeLimit: true,
+      accrueReward: false
+    });
+
+    uint256 workerBalanceBefore = keeperWorker.balance;
+
+    vm.prank(keeperWorker, keeperWorker);
+    _callExecuteHelper(
+      agent,
+      address(counter),
+      jobId,
+      flags,
+      kid,
+      new bytes(0)
+    );
+
+    assertApproxEqAbs(keeperWorker.balance - workerBalanceBefore, agent.calculateCompensationPure({
+      rewardPct_: 35,
+      fixedReward_: 10,
+      blockBaseFee_: 100 gwei,
+      gasUsed_: 29000
+    }), 0.0001 ether);
+  }
+
+  function testAcceptBaseFeeLtGasPrice() public {
+    vm.fee(10 gwei);
+    assertEq(block.basefee, 10 gwei);
+    assertEq(agent.getJob(jobKey).maxBaseFeeGwei, 100);
+    uint256 flags = _config({
+      checkCredits: true,
+      acceptMaxBaseFeeLimit: true,
+      accrueReward: false
+    });
+
+    uint256 workerBalanceBefore = keeperWorker.balance;
+
+    vm.prank(keeperWorker, keeperWorker);
+    _callExecuteHelper(
+      agent,
+      address(counter),
+      jobId,
+      flags,
+      kid,
+      new bytes(0)
+    );
+
+    assertApproxEqAbs(keeperWorker.balance - workerBalanceBefore, agent.calculateCompensationPure({
+      rewardPct_: 35,
+      fixedReward_: 10,
+      blockBaseFee_: 10 gwei,
+      gasUsed_: 29000
+    }), 0.0001 ether);
+  }
+
   function testErrNotEOA() public {
     vm.expectRevert(PPAgentV2.NonEOASender.selector);
     vm.prank(keeperWorker, bob);
