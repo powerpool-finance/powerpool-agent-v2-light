@@ -79,7 +79,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     uint256 baseFee,
     uint256 gasPrice,
     uint256 compensation,
-    uint256 binJobAfter
+    bytes32 binJobAfter
   );
   event WithdrawFees(address indexed to, uint256 amount);
   event Slash(uint256 indexed keeperId, address to, uint256 slashAmount);
@@ -467,7 +467,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
         block.basefee,
         tx.gasprice,
         compensation,
-        binJob
+        bytes32(binJob)
       );
     // Tx reverted
     } else {
