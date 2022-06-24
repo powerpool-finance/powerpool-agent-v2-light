@@ -556,33 +556,34 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
       revert MissingJobAddress();
     }
 
+    if (params_.calldataSource > 2) {
+      revert InvalidCalldataSource();
+    }
+
     _assertInterval(params_.intervalSeconds, params_.calldataSource);
     _assertJobParams(params_.maxBaseFeeGwei, params_.fixedReward, params_.rewardPct);
     jobKey = getJobKey(params_.jobAddress, jobId);
+
+    emit RegisterJob(
+      jobKey,
+      params_.jobAddress,
+      params_.jobSelector,
+      params_.useJobOwnerCredits,
+      params_.jobOwner,
+      params_.jobMinCvp,
+      params_.maxBaseFeeGwei,
+      params_.rewardPct,
+      params_.fixedReward,
+      params_.calldataSource
+    );
 
     if (params_.calldataSource == CALLDATA_SOURCE_PRE_DEFINED) {
       _setJobPreDefinedCalldata(jobKey, preDefinedCalldata_);
     } else if (params_.calldataSource == CALLDATA_SOURCE_RESOLVER) {
       _setJobResolver(jobKey, resolver_);
     }
-    if (params_.calldataSource > 2) {
-      revert InvalidCalldataSource();
-    }
 
     {
-      emit RegisterJob(
-        jobKey,
-        params_.jobAddress,
-        params_.jobSelector,
-        params_.useJobOwnerCredits,
-        params_.jobOwner,
-        params_.jobMinCvp,
-        params_.maxBaseFeeGwei,
-        params_.rewardPct,
-        params_.fixedReward,
-        params_.calldataSource
-      );
-
       bytes4 selector = 0x00000000;
       if (params_.calldataSource != CALLDATA_SOURCE_PRE_DEFINED) {
         selector = params_.jobSelector;
