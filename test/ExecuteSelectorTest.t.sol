@@ -240,7 +240,7 @@ contract ExecuteSelectorTest is TestHelper {
       rewardPct_: 35,
       fixedReward_: 10,
       blockBaseFee_: 100 gwei,
-      gasUsed_: 29000
+      gasUsed_: 34070
     }), 0.0001 ether);
   }
 
@@ -269,7 +269,7 @@ contract ExecuteSelectorTest is TestHelper {
       rewardPct_: 35,
       fixedReward_: 10,
       blockBaseFee_: 10 gwei,
-      gasUsed_: 29000
+      gasUsed_: 34070
     }), 0.0001 ether);
   }
 
@@ -311,7 +311,7 @@ contract ExecuteSelectorTest is TestHelper {
     uint256 compensationsChange = agent.compensations(kid) - compensationsBefore;
 
     assertEq(counter.current(), 1);
-    assertApproxEqAbs(0.01204694875 ether, keeperBalanceChange, 0.0001 ether);
+    assertApproxEqAbs(0.01256604040 ether, keeperBalanceChange, 0.0001 ether);
     assertEq(keeperBalanceChange, jobCreditsChange);
 
     assertEq(compensationsChange, 0);
@@ -350,7 +350,7 @@ contract ExecuteSelectorTest is TestHelper {
 
     assertEq(counter.current(), 1);
 
-    assertApproxEqAbs(0.01204694875 ether, jobCreditsChange, 0.0001 ether);
+    assertApproxEqAbs(0.0125660404 ether, jobCreditsChange, 0.0001 ether);
     assertEq(compensationsChange, jobCreditsChange);
 
     assertEq(keeperBalanceChange, 0);
@@ -406,7 +406,7 @@ contract ExecuteSelectorTest is TestHelper {
     uint256 compensationsChange = agent.compensations(kid) - compensationsBefore;
 
     assertEq(counter.current(), 1);
-    assertApproxEqAbs(0.01204694875 ether, keeperBalanceChange, 0.0001 ether);
+    assertApproxEqAbs(0.0125660404 ether, keeperBalanceChange, 0.0001 ether);
     assertEq(keeperBalanceChange, jobOwnerCreditsChange);
 
     assertEq(compensationsChange, 0);

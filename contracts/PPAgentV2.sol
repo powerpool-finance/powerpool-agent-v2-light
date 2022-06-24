@@ -258,6 +258,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    *  bits    0-3      4-23                                     24-26  27-27  28-30     31+
    */
   function execute_44g58pv() external {
+    uint256 gasStart = gasleft();
     bytes32 jobKey;
 
     assembly ("memory-safe") {
@@ -349,8 +350,6 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
       revert NonEOASender();
     }
 
-    // TODO: move up?
-    uint256 gasStart = gasleft();
     bool ok;
 
     // Source: Selector
