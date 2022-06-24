@@ -63,7 +63,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   uint256 internal constant MAX_PENDING_WITHDRAWAL_TIMEOUT_SECONDS = 30 days;
   uint256 internal constant MAX_FEE_PPM = 5e4;
   uint256 internal constant FIXED_PAYMENT_MULTIPLIER = 1e15;
-  uint256 internal constant JOB_RUN_GAS_OVERHEAD = 30_000;
+  uint256 internal constant JOB_RUN_GAS_OVERHEAD = 40_000;
 
   uint8 internal constant CALLDATA_SOURCE_SELECTOR = 0;
   uint8 internal constant CALLDATA_SOURCE_PRE_DEFINED = 1;
