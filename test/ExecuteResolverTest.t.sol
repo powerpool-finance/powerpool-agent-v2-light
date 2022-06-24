@@ -23,7 +23,6 @@ contract ExecuteResolverTest is TestHelper {
 
   function setUp() public override {
     defaultFlags = _config({
-      checkCredits: false,
       acceptMaxBaseFeeLimit: false,
       accrueReward: false
     });

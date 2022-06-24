@@ -22,12 +22,10 @@ contract ExecuteSelectorTest is TestHelper {
 
   function setUp() public override {
     defaultFlags = _config({
-      checkCredits: false,
       acceptMaxBaseFeeLimit: false,
       accrueReward: false
     });
     accrueFlags = _config({
-      checkCredits: false,
       acceptMaxBaseFeeLimit: false,
       accrueReward: true
     });
@@ -198,7 +196,6 @@ contract ExecuteSelectorTest is TestHelper {
     vm.fee(101 gwei);
     assertEq(block.basefee, 101 gwei);
     uint256 flags = _config({
-      checkCredits: true,
       acceptMaxBaseFeeLimit: false,
       accrueReward: true
     });
@@ -223,7 +220,6 @@ contract ExecuteSelectorTest is TestHelper {
     assertEq(block.basefee, 500 gwei);
     assertEq(agent.getJob(jobKey).maxBaseFeeGwei, 100);
     uint256 flags = _config({
-      checkCredits: true,
       acceptMaxBaseFeeLimit: true,
       accrueReward: false
     });
@@ -253,7 +249,6 @@ contract ExecuteSelectorTest is TestHelper {
     assertEq(block.basefee, 10 gwei);
     assertEq(agent.getJob(jobKey).maxBaseFeeGwei, 100);
     uint256 flags = _config({
-      checkCredits: true,
       acceptMaxBaseFeeLimit: true,
       accrueReward: false
     });

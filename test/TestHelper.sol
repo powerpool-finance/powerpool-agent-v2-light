@@ -29,12 +29,10 @@ contract TestHelper is Test, PPAgentV2Flags {
   function setUp() public virtual {}
 
   function _config(
-    bool checkCredits,
     bool acceptMaxBaseFeeLimit,
     bool accrueReward
   ) internal pure returns (uint256 cfg){
     cfg = 0;
-    if (checkCredits) cfg = cfg ^ FLAG_CHECK_CREDITS;
     if (acceptMaxBaseFeeLimit) cfg = cfg ^ FLAG_ACCEPT_MAX_BASE_FEE_LIMIT;
     if (accrueReward) cfg = cfg ^ FLAG_ACCRUE_REWARD;
   }
