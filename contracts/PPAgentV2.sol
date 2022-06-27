@@ -351,6 +351,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     }
 
     bool ok;
+    uint256 jobGas = gasleft() - 50_000;
 
     // Source: Selector
     uint256 calldataSource = (binJob << 56) >> 248;
@@ -359,10 +360,10 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
       assembly {
         selector := shl(224, shr(8, binJob))
       }
-      (ok,) = jobAddress.call(abi.encode(selector));
+      (ok,) = jobAddress.call{ gas: jobGas }(abi.encode(selector));
     // Source: Bytes
     } else if (calldataSource == CALLDATA_SOURCE_PRE_DEFINED) {
-      (ok,) = jobAddress.call(preDefinedCalldatas[jobKey]);
+      (ok,) = jobAddress.call{ gas: jobGas }(preDefinedCalldatas[jobKey]);
     // Source: Resolver
     } else if (calldataSource == CALLDATA_SOURCE_RESOLVER) {
       assembly ("memory-safe") {
@@ -392,7 +393,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
           }
         }
         // The remaining gas could not be less than 50_000
-        ok := call(sub(gas(), 50000), jobAddress, 0, ptr, cdSize, 0x0, 0x0)
+        ok := call(jobGas, jobAddress, 0, ptr, cdSize, 0x0, 0x0)
       }
     } else {
       // Should never be reached
