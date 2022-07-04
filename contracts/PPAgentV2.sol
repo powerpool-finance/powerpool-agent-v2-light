@@ -268,10 +268,8 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
       let size := 23
 
       // keccack256(address+id(uint24)) to memory to generate jobKey
-      let ptr := mload(0x40)
-      mstore(0x40, add(ptr, size))
-      calldatacopy(ptr, 4, size)
-      jobKey := keccak256(ptr, size)
+      calldatacopy(0, 4, size)
+      jobKey := keccak256(0, size)
     }
 
     address jobAddress;
@@ -300,11 +298,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
 
     // 1. Assert the job is active
     {
-      bool inactive;
-      assembly ("memory-safe") {
-        inactive := iszero(and(binJob, 0x0000000000000000000000000000000000000000000000000000000000000001))
-      }
-      if (inactive) {
+      if (!ConfigFlags.check(binJob, CFG_ACTIVE)) {
         revert InactiveJob(jobKey);
       }
     }
@@ -316,31 +310,27 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
 
     // 3. For interval job ensure the interval has passed
     {
-      bool intervalNotReached;
       uint256 intervalSeconds = (binJob << 32) >> 232;
-      uint256 lastExecutionAt;
 
-      assembly ("memory-safe") {
-        if gt(intervalSeconds, 0) {
-          lastExecutionAt := shr(224, binJob)
-          if gt(lastExecutionAt, 0) {
-            if gt(add(lastExecutionAt, intervalSeconds), timestamp()) {
-              intervalNotReached := true
-            }
+      if (intervalSeconds > 0) {
+        uint256 lastExecutionAt = binJob >> 224;
+        if (lastExecutionAt > 0) {
+          uint256 nextExecutionAt;
+          unchecked {
+            nextExecutionAt = lastExecutionAt + intervalSeconds;
+          }
+          if (nextExecutionAt > block.timestamp) {
+            revert IntervalNotReached(lastExecutionAt, intervalSeconds, block.timestamp);
           }
         }
-      }
-
-      if (intervalNotReached) {
-        revert IntervalNotReached(lastExecutionAt, intervalSeconds, block.timestamp);
       }
     }
 
     // 4. Ensure gas price fits base fee
     uint256 maxBaseFee;
     {
-      assembly {
-        maxBaseFee := mul(shr(240, shl(112, binJob)), 1000000000)
+      unchecked {
+        maxBaseFee = ((binJob << 112) >> 240)  * 1 gwei;
       }
       if (block.basefee > maxBaseFee && !ConfigFlags.check(cfg, FLAG_ACCEPT_MAX_BASE_FEE_LIMIT)) {
         revert BaseFeeGtGasPrice(block.basefee, maxBaseFee);
@@ -754,11 +744,9 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   }
 
   function _updateRawJob(bytes32 jobKey_, uint256 job_) internal {
+    Job storage job = jobs[jobKey_];
     assembly {
-      mstore(0, jobKey_)
-      // DANGER: ensure 0x0b still matches jobs position if storage layout changes
-      mstore(32, 0x0d)
-      sstore(keccak256(0, 0x40), job_)
+      sstore(job.slot, job_)
     }
   }
 
@@ -1157,11 +1145,9 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    *  bits    0-3        4-6      7-7            8-11        12-13     14-15          16-26                  27-30    31-31
    */
   function getJobRaw(bytes32 jobKey_) public view returns (uint256 rawJob) {
+    Job storage job = jobs[jobKey_];
     assembly {
-      mstore(0, jobKey_)
-      // DANGER: ensure 0x0b still matches jobs position if storage layout changes
-      mstore(32, 0x0d)
-      rawJob := sload(keccak256(0, 0x40))
+      rawJob := sload(job.slot)
     }
   }
 
