@@ -84,8 +84,8 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     bytes32 binJobAfter
   );
   event WithdrawFees(address indexed to, uint256 amount);
-  event Slash(uint256 indexed keeperId, address to, uint256 slashAmount);
-  event RegisterAsKeeper(uint256 indexed keeperId, address indexed keeperAdmin, address keeperWorker);
+  event Slash(uint256 indexed keeperId, address indexed to, uint256 slashAmount);
+  event RegisterAsKeeper(uint256 indexed keeperId, address indexed keeperAdmin, address indexed keeperWorker);
   event SetWorkerAddress(uint256 indexed keeperId, address indexed worker);
   event Stake(uint256 indexed keeperId, uint256 amount, address staker, address receiver);
   event InitiateRedeem(uint256 indexed keeperId, uint256 redeemAmount, uint256 stakeAmount, uint256 slashedStakeAmount);

@@ -10,7 +10,7 @@ contract KeeperTest is TestHelper {
   PPAgentV2 internal agent;
   uint256 internal kid;
 
-  event RegisterAsKeeper(uint256 indexed keeperId, address indexed keeperAdmin, address keeperWorker);
+  event RegisterAsKeeper(uint256 indexed keeperId, address indexed keeperAdmin, address indexed keeperWorker);
   event Stake(uint256 indexed keeperId, uint256 amount, address staker, address receiver);
 
   function setUp() public override {
