@@ -436,7 +436,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
             creditsAfter = creditsBefore - compensation;
           }
           // update job credits
-          binJob = binJob & BM_CLEAR_CREDITS ^ (creditsAfter << 40);
+          binJob = binJob & BM_CLEAR_CREDITS | (creditsAfter << 40);
           jobChanged = true;
         }
 
@@ -451,7 +451,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
           uint256 intervalSeconds = (binJob << 32) >> 232;
           if (intervalSeconds > 0) {
             uint256 lastExecutionAt = uint32(block.timestamp);
-            binJob = binJob & BM_CLEAR_LAST_UPDATE_AT ^ (lastExecutionAt << 224);
+            binJob = binJob & BM_CLEAR_LAST_UPDATE_AT | (lastExecutionAt << 224);
             jobChanged = true;
           }
         }
@@ -593,13 +593,13 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
 
       uint256 config = CFG_ACTIVE;
       if (params_.useJobOwnerCredits) {
-        config = config ^ CFG_USE_JOB_OWNER_CREDITS;
+        config = config | CFG_USE_JOB_OWNER_CREDITS;
       }
       if (params_.assertResolverSelector) {
-        config = config ^ CFG_ASSERT_RESOLVER_SELECTOR;
+        config = config | CFG_ASSERT_RESOLVER_SELECTOR;
       }
       if (params_.jobMinCvp > 0) {
-        config = config ^ CFG_CHECK_KEEPER_MIN_CVP_DEPOSIT;
+        config = config | CFG_CHECK_KEEPER_MIN_CVP_DEPOSIT;
       }
 
       jobs[jobKey] = Job({
@@ -738,13 +738,13 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     uint256 newConfig = 0;
 
     if (isActive_) {
-      newConfig = newConfig ^ CFG_ACTIVE;
+      newConfig = newConfig | CFG_ACTIVE;
     }
     if (useJobOwnerCredits_) {
-      newConfig = newConfig ^ CFG_USE_JOB_OWNER_CREDITS;
+      newConfig = newConfig | CFG_USE_JOB_OWNER_CREDITS;
     }
     if (assertResolverSelector_) {
-      newConfig = newConfig ^ CFG_ASSERT_RESOLVER_SELECTOR;
+      newConfig = newConfig | CFG_ASSERT_RESOLVER_SELECTOR;
     }
 
     uint256 job = getJobRaw(jobKey_) & BM_CLEAR_CONFIG | newConfig;
