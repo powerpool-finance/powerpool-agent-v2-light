@@ -107,7 +107,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     bool useJobOwnerCredits,
     address owner,
     uint256 jobMinCvp,
-    uint256 maxBaseFee,
+    uint256 maxBaseFeeGwei,
     uint256 rewardPct,
     uint256 fixedReward,
     uint256 calldataSource
