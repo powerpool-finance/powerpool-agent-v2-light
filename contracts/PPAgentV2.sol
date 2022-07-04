@@ -65,9 +65,11 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   uint256 internal constant FIXED_PAYMENT_MULTIPLIER = 1e15;
   uint256 internal constant JOB_RUN_GAS_OVERHEAD = 40_000;
 
-  uint8 internal constant CALLDATA_SOURCE_SELECTOR = 0;
-  uint8 internal constant CALLDATA_SOURCE_PRE_DEFINED = 1;
-  uint8 internal constant CALLDATA_SOURCE_RESOLVER = 2;
+  enum CalldataSourceType {
+    SELECTOR,
+    PRE_DEFINED,
+    RESOLVER
+  }
 
   IERC20 public immutable CVP;
 
@@ -212,8 +214,8 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     }
   }
 
-  function _assertJobCalldataSource(bytes32 jobKey_, uint8 source_) internal view {
-    if (jobs[jobKey_].calldataSource != source_) {
+  function _assertJobCalldataSource(bytes32 jobKey_, CalldataSourceType source_) internal view {
+    if (CalldataSourceType(jobs[jobKey_].calldataSource) != source_) {
       revert NotSupportedByJobCalldataSource();
     }
   }
@@ -228,9 +230,9 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     }
   }
 
-  function _assertInterval(uint256 interval_, uint256 calldataSource_) internal pure {
+  function _assertInterval(uint256 interval_, CalldataSourceType calldataSource_) internal pure {
     if (interval_ == 0 &&
-      (calldataSource_ == CALLDATA_SOURCE_SELECTOR || calldataSource_ == CALLDATA_SOURCE_PRE_DEFINED)) {
+      (calldataSource_ == CalldataSourceType.SELECTOR || calldataSource_ == CalldataSourceType.PRE_DEFINED)) {
       revert JobShouldHaveInterval();
     }
   }
@@ -354,18 +356,18 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     uint256 jobGas = gasleft() - 50_000;
 
     // Source: Selector
-    uint256 calldataSource = (binJob << 56) >> 248;
-    if (calldataSource == CALLDATA_SOURCE_SELECTOR) {
+    CalldataSourceType calldataSource = CalldataSourceType((binJob << 56) >> 248);
+    if (calldataSource == CalldataSourceType.SELECTOR) {
       bytes4 selector;
       assembly {
         selector := shl(224, shr(8, binJob))
       }
       (ok,) = jobAddress.call{ gas: jobGas }(abi.encode(selector));
     // Source: Bytes
-    } else if (calldataSource == CALLDATA_SOURCE_PRE_DEFINED) {
+    } else if (calldataSource == CalldataSourceType.PRE_DEFINED) {
       (ok,) = jobAddress.call{ gas: jobGas }(preDefinedCalldatas[jobKey]);
     // Source: Resolver
-    } else if (calldataSource == CALLDATA_SOURCE_RESOLVER) {
+    } else if (calldataSource == CalldataSourceType.RESOLVER) {
       assembly ("memory-safe") {
         let cdInCdSize := calldatasize()
         // calldata offset is 31
@@ -560,7 +562,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
       revert InvalidCalldataSource();
     }
 
-    _assertInterval(params_.intervalSeconds, params_.calldataSource);
+    _assertInterval(params_.intervalSeconds, CalldataSourceType(params_.calldataSource));
     _assertJobParams(params_.maxBaseFeeGwei, params_.fixedReward, params_.rewardPct);
     jobKey = getJobKey(params_.jobAddress, jobId);
 
@@ -577,15 +579,15 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
       params_.calldataSource
     );
 
-    if (params_.calldataSource == CALLDATA_SOURCE_PRE_DEFINED) {
+    if (CalldataSourceType(params_.calldataSource) == CalldataSourceType.PRE_DEFINED) {
       _setJobPreDefinedCalldata(jobKey, preDefinedCalldata_);
-    } else if (params_.calldataSource == CALLDATA_SOURCE_RESOLVER) {
+    } else if (CalldataSourceType(params_.calldataSource) == CalldataSourceType.RESOLVER) {
       _setJobResolver(jobKey, resolver_);
     }
 
     {
       bytes4 selector = 0x00000000;
-      if (params_.calldataSource != CALLDATA_SOURCE_PRE_DEFINED) {
+      if (CalldataSourceType(params_.calldataSource) != CalldataSourceType.PRE_DEFINED) {
         selector = params_.jobSelector;
       }
 
@@ -657,7 +659,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
 
     Job memory job = jobs[jobKey_];
 
-    _assertInterval(intervalSeconds_, job.calldataSource);
+    _assertInterval(intervalSeconds_, CalldataSourceType(job.calldataSource));
 
     uint256 cfg = job.config;
 
@@ -687,7 +689,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    */
   function setJobResolver(bytes32 jobKey_, Resolver calldata resolver_) external {
     _assertOnlyJobOwner(jobKey_);
-    _assertJobCalldataSource(jobKey_, CALLDATA_SOURCE_RESOLVER);
+    _assertJobCalldataSource(jobKey_, CalldataSourceType.RESOLVER);
 
     _setJobResolver(jobKey_, resolver_);
   }
@@ -708,7 +710,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    */
   function setJobPreDefinedCalldata(bytes32 jobKey_, bytes calldata preDefinedCalldata_) external {
     _assertOnlyJobOwner(jobKey_);
-    _assertJobCalldataSource(jobKey_, CALLDATA_SOURCE_PRE_DEFINED);
+    _assertJobCalldataSource(jobKey_, CalldataSourceType.PRE_DEFINED);
 
     _setJobPreDefinedCalldata(jobKey_, preDefinedCalldata_);
   }
