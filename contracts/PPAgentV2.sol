@@ -92,7 +92,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   event FinalizeRedeem(uint256 indexed keeperId, address indexed beneficiary, uint256 amount);
   event WithdrawCompensation(uint256 indexed keeperId, address indexed to, uint256 amount);
   event DepositJobCredits(bytes32 indexed jobKey, address indexed depositor, uint256 amount, uint256 fee);
-  event WithdrawJobCredits(bytes32 indexed jobKey, address indexed owner, address indexed to, uint96 amount);
+  event WithdrawJobCredits(bytes32 indexed jobKey, address indexed owner, address indexed to, uint256 amount);
   event DepositJobOwnerCredits(address indexed jobOwner, address indexed depositor, uint256 amount, uint256 fee);
   event WithdrawJobOwnerCredits(address indexed jobOwner, address indexed to, uint256 amount);
   event JobTransfer(bytes32 indexed jobKey, address indexed from, address indexed to);
@@ -807,7 +807,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   function withdrawJobCredits(
     bytes32 jobKey_,
     address payable to_,
-    uint88 amount_
+    uint256 amount_
   ) external {
     _assertOnlyJobOwner(jobKey_);
     _assertNonZeroAmount(amount_);
@@ -818,10 +818,10 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     }
 
     unchecked {
-      jobs[jobKey_].credits = creditsBefore - amount_;
+      jobs[jobKey_].credits = creditsBefore - uint88(amount_);
     }
 
-    to_.transfer(uint256(amount_));
+    to_.transfer(amount_);
 
     emit WithdrawJobCredits(jobKey_, msg.sender, to_, amount_);
   }

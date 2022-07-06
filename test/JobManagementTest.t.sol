@@ -8,7 +8,7 @@ import "./TestHelper.sol";
 
 contract JobManagementTest is TestHelper {
   event DepositJobCredits(bytes32 indexed jobKey, address indexed depositor, uint256 amount, uint256 fee);
-  event WithdrawJobCredits(bytes32 indexed jobKey, address indexed owner, address indexed to, uint96 amount);
+  event WithdrawJobCredits(bytes32 indexed jobKey, address indexed owner, address indexed to, uint256 amount);
   event JobTransfer(bytes32 indexed jobKey, address indexed from, address indexed to);
   event SetJobConfig(bytes32 indexed jobKey, bool isActive_, bool useJobOwnerCredits_, bool assertResolverSelector_);
   event SetJobResolver(bytes32 indexed jobKey, address resolverAddress, bytes resolverCalldata);
