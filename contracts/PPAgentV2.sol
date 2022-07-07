@@ -802,17 +802,21 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    *
    * @param jobKey_ The jobKey
    * @param to_ The address to send NATIVE tokens to
-   * @param amount_ The amount to withdraw
+   * @param amount_ The amount to withdraw. Use type(uint256).max for the total available credits withdrawal.
    */
   function withdrawJobCredits(
     bytes32 jobKey_,
     address payable to_,
     uint256 amount_
   ) external {
+    uint88 creditsBefore = jobs[jobKey_].credits;
+    if (amount_ == type(uint256).max) {
+      amount_ = creditsBefore;
+    }
+
     _assertOnlyJobOwner(jobKey_);
     _assertNonZeroAmount(amount_);
 
-    uint88 creditsBefore = jobs[jobKey_].credits;
     if (creditsBefore < amount_) {
       revert CreditsWithdrawalUnderflow();
     }
@@ -852,12 +856,16 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    * A job owner withdraws the job owner credits in NATIVE tokens.
    *
    * @param to_ The address to send NATIVE tokens to
-   * @param amount_ The amount to withdraw
+   * @param amount_ The amount to withdraw. Use type(uint256).max for the total available credits withdrawal.
    */
   function withdrawJobOwnerCredits(address payable to_, uint256 amount_) external {
+    uint256 creditsBefore = jobOwnerCredits[msg.sender];
+    if (amount_ == type(uint256).max) {
+      amount_ = creditsBefore;
+    }
+
     _assertNonZeroAmount(amount_);
 
-    uint256 creditsBefore = jobOwnerCredits[msg.sender];
     if (creditsBefore < amount_) {
       revert CreditsWithdrawalUnderflow();
     }
@@ -916,13 +924,17 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    *
    * @param keeperId_ The keeper ID
    * @param to_ The address to withdraw to
-   * @param amount_ The amount to withdraw
+   * @param amount_ The amount to withdraw. Use type(uint256).max for the total available compensation withdrawal.
    */
   function withdrawCompensation(uint256 keeperId_, address payable to_, uint256 amount_) external {
+    uint256 available = compensations[keeperId_];
+    if (amount_ == type(uint256).max) {
+      amount_ = available;
+    }
+
     _assertNonZeroAmount(amount_);
     _assertOnlyKeeperAdmin(keeperId_);
 
-    uint256 available = compensations[keeperId_];
     if (amount_ > available) {
       revert WithdrawAmountExceedsAvailable(amount_, available);
     }

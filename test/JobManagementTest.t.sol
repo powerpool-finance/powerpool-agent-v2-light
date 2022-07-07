@@ -219,6 +219,22 @@ contract JobManagementTest is TestHelper {
     assertEq(bob.balance, bobBalanceBefore + 1.2 ether);
   }
 
+  function testWithdrawCurrentJobCredits() public {
+    vm.prank(alice);
+    agent.depositJobCredits{ value: 1.2 ether}(jobKey);
+    uint256 bobBalanceBefore = bob.balance;
+
+    vm.expectEmit(true, true, true, true, address(agent));
+    emit WithdrawJobCredits(jobKey, alice, bob, 1.2 ether);
+
+    vm.prank(alice);
+    agent.withdrawJobCredits(jobKey, bob, type(uint256).max);
+
+    assertEq(bob.balance, bobBalanceBefore + 1.2 ether);
+    PPAgentV2.Job memory job = agent.getJob(jobKey);
+    assertEq(job.credits, 0 ether);
+  }
+
   function testErrWithdrawJobCreditsMissingAmount() public {
     vm.prank(alice);
     agent.depositJobCredits{ value: 1.2 ether}(jobKey);

@@ -126,6 +126,22 @@ contract JobOwnerTest is TestHelper {
     assertEq(bob.balance, bobBalanceBefore + 3 ether);
   }
 
+  function testWithdrawCurrentJobOwnerCredits() public {
+    vm.prank(alice);
+    agent.depositJobOwnerCredits{ value: 10 ether}(alice);
+    assertEq(agent.jobOwnerCredits(alice), 10 ether);
+    uint256 bobBalanceBefore = bob.balance;
+
+    vm.expectEmit(true, true, false, true, address(agent));
+    emit WithdrawJobOwnerCredits(alice, bob, 10 ether);
+
+    vm.prank(alice);
+    agent.withdrawJobOwnerCredits(bob, type(uint256).max);
+
+    assertEq(agent.jobOwnerCredits(alice), 0 ether);
+    assertEq(bob.balance, bobBalanceBefore + 10 ether);
+  }
+
   function testErrRemoveJobOwnerCreditsMissingAmount() public {
     vm.expectRevert(
       abi.encodeWithSelector(PPAgentV2.MissingAmount.selector)
