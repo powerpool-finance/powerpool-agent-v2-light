@@ -505,7 +505,6 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   struct RegisterJobParams {
     address jobAddress;
     bytes4 jobSelector;
-    address jobOwner;
     bool useJobOwnerCredits;
     bool assertResolverSelector;
     uint16 maxBaseFeeGwei;
@@ -570,7 +569,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
       params_.jobAddress,
       params_.jobSelector,
       params_.useJobOwnerCredits,
-      params_.jobOwner,
+      msg.sender,
       params_.jobMinCvp,
       params_.maxBaseFeeGwei,
       params_.rewardPct,
@@ -618,11 +617,11 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     }
 
     jobNextIds[params_.jobAddress] += 1;
-    jobOwners[jobKey] = params_.jobOwner;
+    jobOwners[jobKey] = msg.sender;
 
     if (msg.value > 0) {
       if (params_.useJobOwnerCredits) {
-        _processJobOwnerCreditsDeposit(params_.jobOwner);
+        _processJobOwnerCreditsDeposit(msg.sender);
       } else {
         _processJobCreditsDeposit(jobKey);
       }

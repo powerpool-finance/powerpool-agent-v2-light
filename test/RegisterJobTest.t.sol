@@ -36,7 +36,6 @@ contract RegisterJob is TestHelper {
     params1 = PPAgentV2.RegisterJobParams({
       jobAddress: job1,
       jobSelector: CounterJob.increment.selector,
-      jobOwner: bob,
       maxBaseFeeGwei: 100,
       rewardPct: 35,
       fixedReward: 10,
@@ -51,7 +50,6 @@ contract RegisterJob is TestHelper {
     params2 = PPAgentV2.RegisterJobParams({
       jobAddress: job2,
       jobSelector: CounterJob.increment.selector,
-      jobOwner: bob,
       maxBaseFeeGwei: 100,
       rewardPct: 35,
       fixedReward: 10,
@@ -66,7 +64,6 @@ contract RegisterJob is TestHelper {
     params3 = PPAgentV2.RegisterJobParams({
       jobAddress: job3,
       jobSelector: CounterJob.increment.selector,
-      jobOwner: bob,
       maxBaseFeeGwei: 100,
       rewardPct: 35,
       fixedReward: 10,
@@ -157,6 +154,7 @@ contract RegisterJob is TestHelper {
   }
 
   function testRegisterIntervalJobWithSelector() public {
+    vm.prank(bob);
     (bytes32 jobKey,) = agent.registerJob({
       params_: params1,
       resolver_: emptyResolver,
@@ -432,6 +430,8 @@ contract RegisterJob is TestHelper {
     PPAgentV2.RegisterJobParams memory params = params1;
     params.useJobOwnerCredits = false;
 
+    vm.prank(bob);
+    vm.deal(bob, 2 ether);
     (bytes32 jobKey,) = agent.registerJob{ value: 1.5 ether }({
       params_: params,
       resolver_: emptyResolver,
@@ -440,7 +440,7 @@ contract RegisterJob is TestHelper {
 
     PPAgentV2.Job memory job = agent.getJob(jobKey);
     assertEq(job.credits, 1.5 ether);
-    assertEq(agent.jobOwnerCredits(params.jobOwner), 0);
+    assertEq(agent.jobOwnerCredits(bob), 0);
   }
 
   function testShouldAllowDepositToTheJobBalanceWithFee() public {
@@ -464,6 +464,8 @@ contract RegisterJob is TestHelper {
     PPAgentV2.RegisterJobParams memory params = params1;
     params.useJobOwnerCredits = true;
 
+    vm.prank(bob);
+    vm.deal(bob, 2 ether);
     (bytes32 jobKey,) = agent.registerJob{ value: 1.5 ether }({
       params_: params,
       resolver_: emptyResolver,
@@ -472,7 +474,7 @@ contract RegisterJob is TestHelper {
 
     PPAgentV2.Job memory job = agent.getJob(jobKey);
     assertEq(job.credits, 0);
-    assertEq(agent.jobOwnerCredits(params.jobOwner), 1.5 ether);
+    assertEq(agent.jobOwnerCredits(bob), 1.5 ether);
   }
 
   function testShouldAllowDepositToTheOwnerBalanceWithFee() public {
@@ -482,6 +484,8 @@ contract RegisterJob is TestHelper {
     PPAgentV2.RegisterJobParams memory params = params1;
     params.useJobOwnerCredits = true;
 
+    vm.prank(bob);
+    vm.deal(bob, 10 ether);
     (bytes32 jobKey,) = agent.registerJob{ value: 10 ether }({
       params_: params,
       resolver_: emptyResolver,
@@ -489,7 +493,7 @@ contract RegisterJob is TestHelper {
     });
 
     assertEq(agent.getJob(jobKey).credits, 0);
-    assertEq(agent.jobOwnerCredits(params.jobOwner), 9.6 ether);
+    assertEq(agent.jobOwnerCredits(bob), 9.6 ether);
     assertEq(agent.feeTotal(), 0.4 ether);
   }
 

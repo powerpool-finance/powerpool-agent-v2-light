@@ -35,6 +35,7 @@ contract JobManagementTest is TestHelper {
   modifier jobWithResolverCalldataSource() {
     PPAgentV2.RegisterJobParams memory params = params1;
     params.calldataSource = CALLDATA_SOURCE_RESOLVER;
+    vm.prank(alice);
     (jobKey,) = agent.registerJob(params, resolver1, new bytes(0));
     _;
   }
@@ -42,6 +43,7 @@ contract JobManagementTest is TestHelper {
   modifier jobWithPreDefinedCalldataSource() {
     PPAgentV2.RegisterJobParams memory params = params1;
     params.calldataSource = CALLDATA_SOURCE_PRE_DEFINED;
+    vm.prank(alice);
     (jobKey,) = agent.registerJob(params, resolver1, new bytes(0));
     _;
   }
@@ -56,7 +58,6 @@ contract JobManagementTest is TestHelper {
     params1 = PPAgentV2.RegisterJobParams({
       jobAddress: alice,
       jobSelector: hex"00000001",
-      jobOwner: alice,
       maxBaseFeeGwei: 100,
       rewardPct: 35,
       fixedReward: 10,
@@ -72,6 +73,7 @@ contract JobManagementTest is TestHelper {
       resolverAddress: address(1),
       resolverCalldata: new bytes(0)
     });
+    vm.prank(alice);
     (jobKey,) = agent.registerJob({
       params_: params1,
       resolver_: resolver1,
@@ -519,6 +521,7 @@ contract JobManagementTest is TestHelper {
   function testErrUpdateJobWithPreDefinedCalldataShouldHaveInterval() public {
     PPAgentV2.RegisterJobParams memory params = params1;
     params.calldataSource = CALLDATA_SOURCE_PRE_DEFINED;
+    vm.prank(alice);
     (bytes32 myJobKey,) = agent.registerJob(params, resolver1, new bytes(0));
     vm.expectRevert(
       abi.encodeWithSelector(PPAgentV2.JobShouldHaveInterval.selector)
@@ -531,6 +534,7 @@ contract JobManagementTest is TestHelper {
   function testUpdateJobWithResolverCanHaveZeroInterval() public {
     PPAgentV2.RegisterJobParams memory params = params1;
     params.calldataSource = CALLDATA_SOURCE_RESOLVER;
+    vm.prank(alice);
     (bytes32 myJobKey,) = agent.registerJob(params, resolver1, new bytes(0));
 
     vm.prank(alice);

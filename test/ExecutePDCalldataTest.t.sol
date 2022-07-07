@@ -45,7 +45,6 @@ contract ExecutePDCalldataTest is TestHelper {
     PPAgentV2.RegisterJobParams memory params = PPAgentV2.RegisterJobParams({
       jobAddress: job_,
       jobSelector: NON_ZERO_SELECTOR,
-      jobOwner: alice,
       maxBaseFeeGwei: 100,
       rewardPct: 35,
       fixedReward: 10,
@@ -57,6 +56,8 @@ contract ExecutePDCalldataTest is TestHelper {
       calldataSource: CALLDATA_SOURCE_PRE_DEFINED,
       intervalSeconds: 10
     });
+    vm.prank(alice);
+    vm.deal(alice, 10 ether);
     (jobKey,jobId) = agent.registerJob{ value: 1 ether }({
       params_: params,
       resolver_: resolver,

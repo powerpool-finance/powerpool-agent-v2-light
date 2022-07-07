@@ -40,7 +40,6 @@ contract ExecuteSelectorTest is TestHelper {
     PPAgentV2.RegisterJobParams memory params = PPAgentV2.RegisterJobParams({
       jobAddress: address(counter),
       jobSelector: OnlySelectorTestJob.increment.selector,
-      jobOwner: alice,
       maxBaseFeeGwei: 100,
       rewardPct: 35,
       fixedReward: 10,
@@ -52,6 +51,8 @@ contract ExecuteSelectorTest is TestHelper {
       calldataSource: CALLDATA_SOURCE_SELECTOR,
       intervalSeconds: 10
     });
+    vm.prank(alice);
+    vm.deal(alice, 10 ether);
     (jobKey,jobId) = agent.registerJob{ value: 1 ether }({
       params_: params,
       resolver_: resolver,
