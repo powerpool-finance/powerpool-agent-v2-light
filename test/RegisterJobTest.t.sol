@@ -195,6 +195,20 @@ contract RegisterJob is TestHelper {
     assertEq(agent.jobOwnerCredits(bob), 0);
   }
 
+  function testErrJobWithCvpAddress() public {
+    PPAgentV2.RegisterJobParams memory params = params1;
+    params.jobAddress = address(cvp);
+
+    vm.expectRevert(
+      abi.encodeWithSelector(PPAgentV2.InvalidJobAddress.selector)
+    );
+    agent.registerJob({
+      params_: params,
+      resolver_: emptyResolver,
+      preDefinedCalldata_: new bytes(0)
+    });
+  }
+
   function testErrJobWithSelectorMissingInterval() public {
     PPAgentV2.RegisterJobParams memory params = params1;
     params.intervalSeconds = 0;

@@ -52,6 +52,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   error MissingAmount();
   error WithdrawAmountExceedsAvailable(uint256 wanted, uint256 actual);
   error JobShouldHaveInterval();
+  error InvalidJobAddress();
   error MissingResolverAddress();
   error NotSupportedByJobCalldataSource();
   error OnlyKeeperAdmin();
@@ -550,6 +551,10 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
 
     if (params_.calldataSource > 2) {
       revert InvalidCalldataSource();
+    }
+
+    if (params_.jobAddress == address(CVP)) {
+      revert InvalidJobAddress();
     }
 
     _assertInterval(params_.intervalSeconds, CalldataSourceType(params_.calldataSource));
