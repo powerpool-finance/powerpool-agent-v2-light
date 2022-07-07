@@ -12,8 +12,6 @@ import "./jobs/ComplexCalldataTestJob.sol";
 import "./jobs/SimpleCalldataIntervalTestJob.sol";
 
 contract ExecuteResolverTest is TestHelper {
-  MockCVP internal cvp;
-  PPAgentV2 internal agent;
   ICounter internal job;
 
   bytes32 internal jobKey;

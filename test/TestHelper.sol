@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import "../contracts/PPAgentV2Flags.sol";
 import "../lib/forge-std/src/Test.sol";
 import "../contracts/PPAgentV2.sol";
+import "./mocks/MockCVP.sol";
 
 contract TestHelper is Test, PPAgentV2Flags {
   address constant internal owner = address(0x8888888888888888888888888888888888888888);
@@ -26,6 +27,9 @@ contract TestHelper is Test, PPAgentV2Flags {
   uint256 internal constant MIN_DEPOSIT_3000_CVP = 3_000 ether;
   uint256 internal constant CVP_TOTAL_SUPPLY = 100_000_000 ether;
 
+  MockCVP internal cvp;
+  PPAgentV2 internal agent;
+
   function setUp() public virtual {}
 
   function _config(
@@ -35,6 +39,36 @@ contract TestHelper is Test, PPAgentV2Flags {
     cfg = 0;
     if (acceptMaxBaseFeeLimit) cfg = cfg ^ FLAG_ACCEPT_MAX_BASE_FEE_LIMIT;
     if (accrueReward) cfg = cfg ^ FLAG_ACCRUE_REWARD;
+  }
+
+  function _stakeOf(uint256 keeperId_) internal view returns (uint256) {
+    (,,uint256 stake,,,,) = agent.getKeeper(keeperId_);
+    return stake;
+  }
+
+  function _slashedStakeOf(uint256 keeperId_) internal view returns (uint256) {
+    (,,,uint256 slashedStake,,,) = agent.getKeeper(keeperId_);
+    return slashedStake;
+  }
+
+  function _compensationOf(uint256 keeperId_) internal view returns (uint256) {
+    (,,,,uint256 compensation,,) = agent.getKeeper(keeperId_);
+    return compensation;
+  }
+
+  function _pendingWithdrawalAmountOf(uint256 keeperId_) internal view returns (uint256) {
+    (,,,,,uint256 amount,) = agent.getKeeper(keeperId_);
+    return amount;
+  }
+
+  function _pendingWithdrawalEndsAt(uint256 keeperId_) internal view returns (uint256) {
+    (,,,,,,uint256 endsAt) = agent.getKeeper(keeperId_);
+    return endsAt;
+  }
+
+  function _workerOf(uint256 keeperId_) internal view returns (address) {
+    (,address worker,,,,,) = agent.getKeeper(keeperId_);
+    return worker;
   }
 
   function _callExecuteHelper(

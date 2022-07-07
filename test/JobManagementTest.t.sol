@@ -24,8 +24,6 @@ contract JobManagementTest is TestHelper {
     uint256 intervalSeconds
   );
 
-  MockCVP internal cvp;
-  PPAgentV2 internal agent;
   PPAgentV2Lens internal lens;
   bytes32 internal jobKey;
 

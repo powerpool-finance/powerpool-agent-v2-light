@@ -8,11 +8,8 @@ import "./jobs/NoCalldataTestJob.sol";
 import "./jobs/OnlySelectorTestJob.sol";
 import "./jobs/SimpleCalldataTestJob.sol";
 import "./jobs/ComplexCalldataTestJob.sol";
-import "../lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 
 contract ExecutePDCalldataTest is TestHelper {
-  MockCVP internal cvp;
-  PPAgentV2 internal agent;
   ICounter internal job;
 
   bytes32 internal jobKey;

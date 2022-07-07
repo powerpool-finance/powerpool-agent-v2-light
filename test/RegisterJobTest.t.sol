@@ -13,8 +13,6 @@ contract RegisterJob is TestHelper {
   address internal job2 = address(0x2222222222222222222222222222222222222222);
   address internal job3 = address(0x3333333333333333333333333333333333333333);
 
-  MockCVP internal cvp;
-  PPAgentV2 internal agent;
   PPAgentV2Lens internal lens;
   CounterJob internal counter;
 

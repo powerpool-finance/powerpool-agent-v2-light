@@ -6,8 +6,6 @@ import "./mocks/MockCVP.sol";
 import "./TestHelper.sol";
 
 contract AgentOwnerTest is TestHelper {
-  MockCVP internal cvp;
-  PPAgentV2 internal agent;
   uint256 internal kid;
 
   event SetAgentParams(uint256 minKeeperCvp_, uint256 timeoutSeconds_, uint256 feePct_);

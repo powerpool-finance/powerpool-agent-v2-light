@@ -10,8 +10,6 @@ import "forge-std/Vm.sol";
 contract ExecuteSelectorTest is TestHelper {
   event Execute(bytes32 indexed jobKey, address indexed job, bool indexed success, uint256 gasUsed, uint256 baseFee, uint256 gasPrice, uint256 compensation);
 
-  MockCVP internal cvp;
-  PPAgentV2 internal agent;
   OnlySelectorTestJob internal counter;
 
   bytes32 internal jobKey;
@@ -91,7 +89,7 @@ contract ExecuteSelectorTest is TestHelper {
     agent.setAgentParams(5_001 ether, 1, 1);
 
     assertEq(agent.minKeeperCvp(), 5_001 ether);
-    assertEq(agent.stakeOf(kid), 5_000 ether);
+    assertEq(_stakeOf(kid), 5_000 ether);
 
     vm.expectRevert(PPAgentV2.InsufficientKeeperStake.selector);
 
@@ -111,7 +109,7 @@ contract ExecuteSelectorTest is TestHelper {
     agent.updateJob(jobKey, 200, 55, 20, 5001 ether, 60);
 
     assertEq(agent.minKeeperCvp(), 3_000 ether);
-    assertEq(agent.stakeOf(kid), 5_000 ether);
+    assertEq(_stakeOf(kid), 5_000 ether);
     assertEq(agent.jobMinKeeperCvp(jobKey), 5001 ether);
 
     vm.expectRevert(PPAgentV2.InsufficientJobScopedKeeperStake.selector);
@@ -294,7 +292,7 @@ contract ExecuteSelectorTest is TestHelper {
     uint256 keeperBalanceBefore = keeperWorker.balance;
     uint256 jobCreditsBefore = agent.getJob(jobKey).credits;
     uint256 ownerCreditsBefore = agent.jobOwnerCredits(jobOwner);
-    uint256 compensationsBefore = agent.compensations(kid);
+    uint256 compensationsBefore = _compensationOf(kid);
 
     vm.prank(keeperWorker, keeperWorker);
     _callExecuteHelper(
@@ -309,7 +307,7 @@ contract ExecuteSelectorTest is TestHelper {
     uint256 keeperBalanceChange = keeperWorker.balance - keeperBalanceBefore;
     uint256 jobCreditsChange = jobCreditsBefore - agent.getJob(jobKey).credits;
     uint256 jobOwnerCreditsChange = ownerCreditsBefore - agent.jobOwnerCredits(jobOwner);
-    uint256 compensationsChange = agent.compensations(kid) - compensationsBefore;
+    uint256 compensationsChange = _compensationOf(kid) - compensationsBefore;
 
     assertEq(counter.current(), 1);
     assertApproxEqAbs(0.01256604040 ether, keeperBalanceChange, 0.0001 ether);
@@ -325,7 +323,7 @@ contract ExecuteSelectorTest is TestHelper {
 
     uint256 keeperBalanceBefore = keeperWorker.balance;
     uint256 jobCreditsBefore = agent.getJob(jobKey).credits;
-    uint256 compensationsBefore = agent.compensations(kid);
+    uint256 compensationsBefore = _compensationOf(kid);
     uint256 ownerCreditsBefore = agent.jobOwnerCredits(jobOwner);
 
     assertEq(
@@ -347,7 +345,7 @@ contract ExecuteSelectorTest is TestHelper {
     uint256 keeperBalanceChange = keeperWorker.balance - keeperBalanceBefore;
     uint256 jobCreditsChange = jobCreditsBefore - agent.getJob(jobKey).credits;
     uint256 jobOwnerCreditsChange = ownerCreditsBefore - agent.jobOwnerCredits(jobOwner);
-    uint256 compensationsChange = agent.compensations(kid) - compensationsBefore;
+    uint256 compensationsChange = _compensationOf(kid) - compensationsBefore;
 
     assertEq(counter.current(), 1);
 
@@ -359,7 +357,7 @@ contract ExecuteSelectorTest is TestHelper {
 
     // Exec #2
     vm.warp(block.timestamp + 31);
-    compensationsBefore = agent.compensations(kid);
+    compensationsBefore = _compensationOf(kid);
     jobCreditsBefore = agent.getJob(jobKey).credits;
     vm.prank(keeperWorker, keeperWorker);
     _callExecuteHelper(
@@ -370,7 +368,7 @@ contract ExecuteSelectorTest is TestHelper {
       kid,
       new bytes(0)
     );
-    compensationsChange = agent.compensations(kid) - compensationsBefore;
+    compensationsChange = _compensationOf(kid) - compensationsBefore;
     jobCreditsChange = jobCreditsBefore - agent.getJob(jobKey).credits;
     assertEq(compensationsChange, jobCreditsChange);
   }
@@ -389,7 +387,7 @@ contract ExecuteSelectorTest is TestHelper {
     uint256 keeperBalanceBefore = keeperWorker.balance;
     uint256 jobCreditsBefore = agent.getJob(jobKey).credits;
     uint256 ownerCreditsBefore = agent.jobOwnerCredits(jobOwner);
-    uint256 compensationsBefore = agent.compensations(kid);
+    uint256 compensationsBefore = _compensationOf(kid);
 
     vm.prank(keeperWorker, keeperWorker);
     _callExecuteHelper(
@@ -404,7 +402,7 @@ contract ExecuteSelectorTest is TestHelper {
     uint256 keeperBalanceChange = keeperWorker.balance - keeperBalanceBefore;
     uint256 jobCreditsChange = jobCreditsBefore - agent.getJob(jobKey).credits;
     uint256 jobOwnerCreditsChange = ownerCreditsBefore - agent.jobOwnerCredits(jobOwner);
-    uint256 compensationsChange = agent.compensations(kid) - compensationsBefore;
+    uint256 compensationsChange = _compensationOf(kid) - compensationsBefore;
 
     assertEq(counter.current(), 1);
     assertApproxEqAbs(0.0125660404 ether, keeperBalanceChange, 0.0001 ether);

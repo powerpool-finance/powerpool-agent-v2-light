@@ -173,16 +173,16 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   // keeperId => (worker,CVP stake)
   mapping(uint256 => Keeper) internal keepers;
   // keeperId => admin
-  mapping(uint256 => address) public keeperAdmins;
+  mapping(uint256 => address) internal keeperAdmins;
   // keeperId => the slashed CVP amount
-  mapping(uint256 => uint256) public slashedStakeOf;
+  mapping(uint256 => uint256) internal slashedStakeOf;
   // keeperId => native token compensation
-  mapping(uint256 => uint256) public compensations;
+  mapping(uint256 => uint256) internal compensations;
 
   // keeperId => pendingWithdrawalCVP amount
-  mapping(uint256 => uint256) public pendingWithdrawalAmount;
+  mapping(uint256 => uint256) internal pendingWithdrawalAmounts;
   // keeperId => pendingWithdrawalEndsAt timestamp
-  mapping(uint256 => uint256) public pendingWithdrawalEndsAt;
+  mapping(uint256 => uint256) internal pendingWithdrawalEndsAt;
 
   // owner => credits
   mapping(address => uint256) public jobOwnerCredits;
@@ -1031,7 +1031,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     unchecked {
       stakeOfToReduceAmount = amount_ - slashedStakeOfBefore;
       keepers[keeperId_].cvpStake = uint96(stakeOfBefore - stakeOfToReduceAmount);
-      pendingWithdrawalAmount[keeperId_] += stakeOfToReduceAmount;
+      pendingWithdrawalAmounts[keeperId_] += stakeOfToReduceAmount;
     }
 
     pendingWithdrawalAfter = block.timestamp + pendingWithdrawalTimeoutSeconds;
@@ -1054,12 +1054,12 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
       revert WithdrawalTimoutNotReached();
     }
 
-    redeemedCvp = pendingWithdrawalAmount[keeperId_];
+    redeemedCvp = pendingWithdrawalAmounts[keeperId_];
     if (redeemedCvp == 0) {
       revert NoPendingWithdrawal();
     }
 
-    pendingWithdrawalAmount[keeperId_] = 0;
+    pendingWithdrawalAmounts[keeperId_] = 0;
     CVP.transfer(to_, redeemedCvp);
 
     emit FinalizeRedeem(keeperId_, to_, redeemedCvp);
@@ -1153,12 +1153,26 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     }
   }
 
-  function keeperInfo(uint256 keeperId_) external view returns (Keeper memory) {
-    return keepers[keeperId_];
-  }
-
-  function stakeOf(uint256 keeperId_) public view returns (uint256) {
-    return keepers[keeperId_].cvpStake;
+  function getKeeper(uint256 keeperId_)
+    external view returns (
+      address admin,
+      address worker,
+      uint256 currentStake,
+      uint256 slashedStake,
+      uint256 compensation,
+      uint256 pendingWithdrawalAmount,
+      uint256 pendingWithdrawalEndAt
+    )
+  {
+    return (
+      keeperAdmins[keeperId_],
+      keepers[keeperId_].worker,
+      keepers[keeperId_].cvpStake,
+      slashedStakeOf[keeperId_],
+      compensations[keeperId_],
+      pendingWithdrawalAmounts[keeperId_],
+      pendingWithdrawalEndsAt[keeperId_]
+    );
   }
 
   function getResolver(bytes32 jobKey_) external view returns (Resolver memory) {

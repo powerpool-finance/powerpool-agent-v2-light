@@ -9,9 +9,6 @@ contract JobOwnerTest is TestHelper {
   event DepositJobOwnerCredits(address indexed jobOwner, address indexed depositor, uint256 amount, uint256 fee);
   event WithdrawJobOwnerCredits(address indexed jobOwner, address indexed to, uint256 amount);
 
-  MockCVP internal cvp;
-  PPAgentV2 internal agent;
-
   function setUp() public override {
     vm.deal(alice, 100 ether);
     vm.deal(bob, 100 ether);
