@@ -9,7 +9,8 @@ import "./TestHelper.sol";
 contract JobManagementTest is TestHelper {
   event DepositJobCredits(bytes32 indexed jobKey, address indexed depositor, uint256 amount, uint256 fee);
   event WithdrawJobCredits(bytes32 indexed jobKey, address indexed owner, address indexed to, uint256 amount);
-  event JobTransfer(bytes32 indexed jobKey, address indexed from, address indexed to);
+  event InitiateJobTransfer(bytes32 indexed jobKey, address indexed from, address indexed to);
+  event AcceptJobTransfer(bytes32 indexed jobKey_, address indexed to_);
   event SetJobConfig(bytes32 indexed jobKey, bool isActive_, bool useJobOwnerCredits_, bool assertResolverSelector_);
   event SetJobResolver(bytes32 indexed jobKey, address resolverAddress, bytes resolverCalldata);
   event SetJobPreDefinedCalldata(bytes32 indexed jobKey, bytes preDefinedCalldata);
@@ -281,17 +282,61 @@ contract JobManagementTest is TestHelper {
     agent.withdrawJobCredits(jobKey, payable(this), 1.2 ether);
   }
 
-  // transferJob()
+  // jobTransfer()
 
   function testJobTransfer() public {
     assertEq(agent.jobOwners(jobKey), alice);
 
+    // Initiate...
     vm.expectEmit(true, true, true, true, address(agent));
-    emit JobTransfer(jobKey, alice, bob);
+    emit InitiateJobTransfer(jobKey, alice, bob);
     vm.prank(alice);
-    agent.transferJob(jobKey, bob);
+    agent.initiateJobTransfer(jobKey, bob);
+
+    assertEq(agent.jobOwners(jobKey), alice);
+    assertEq(agent.jobPendingTransfers(jobKey), bob);
+
+    // Accept...
+    vm.expectEmit(true, true, true, true, address(agent));
+    emit AcceptJobTransfer(jobKey, bob);
+    vm.prank(bob);
+    agent.acceptJobTransfer(jobKey);
 
     assertEq(agent.jobOwners(jobKey), bob);
+    assertEq(agent.jobPendingTransfers(jobKey), address(0));
+  }
+
+  function testJobTransferOwnerCanCancelJobTransfer() public {
+    assertEq(agent.jobOwners(jobKey), alice);
+    assertEq(agent.jobPendingTransfers(jobKey), address(0));
+
+    vm.prank(alice);
+    agent.initiateJobTransfer(jobKey, bob);
+
+    assertEq(agent.jobOwners(jobKey), alice);
+    assertEq(agent.jobPendingTransfers(jobKey), bob);
+
+    vm.prank(alice);
+    agent.initiateJobTransfer(jobKey, alice);
+
+    assertEq(agent.jobOwners(jobKey), alice);
+    assertEq(agent.jobPendingTransfers(jobKey), alice);
+
+    vm.prank(alice);
+    agent.acceptJobTransfer(jobKey);
+
+    assertEq(agent.jobOwners(jobKey), alice);
+    assertEq(agent.jobPendingTransfers(jobKey), address(0));
+  }
+
+  function testErrJobTransferNotPending() public {
+    vm.prank(alice);
+    agent.initiateJobTransfer(jobKey, bob);
+    vm.expectRevert(
+      abi.encodeWithSelector(PPAgentV2.OnlyPendingOwner.selector)
+    );
+    vm.prank(alice);
+    agent.acceptJobTransfer(jobKey);
   }
 
   function testErrJobTransferNotTheOwner() public {
@@ -300,7 +345,7 @@ contract JobManagementTest is TestHelper {
     );
 
     vm.prank(bob);
-    agent.transferJob(jobKey, bob);
+    agent.initiateJobTransfer(jobKey, bob);
   }
 
   // testSetJobConfig()

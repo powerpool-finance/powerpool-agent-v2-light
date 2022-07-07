@@ -24,7 +24,7 @@ contract KeeperTest is TestHelper {
     vm.stopPrank();
 
     vm.deal(address(agent), 20 ether);
-    bytes32 rewardSlotKey = keccak256(abi.encode(kid, 22 /* compensations slot */));
+    bytes32 rewardSlotKey = keccak256(abi.encode(kid, 23 /* compensations slot */));
     vm.store(address(agent), rewardSlotKey, bytes32(uint256(20 ether)));
   }
 

@@ -59,6 +59,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   error TimeoutTooBig();
   error FeeTooBig();
   error InsufficientAmount();
+  error OnlyPendingOwner();
 
   uint256 public constant VERSION = 2;
   uint256 internal constant MAX_PENDING_WITHDRAWAL_TIMEOUT_SECONDS = 30 days;
@@ -96,7 +97,8 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   event WithdrawJobCredits(bytes32 indexed jobKey, address indexed owner, address indexed to, uint256 amount);
   event DepositJobOwnerCredits(address indexed jobOwner, address indexed depositor, uint256 amount, uint256 fee);
   event WithdrawJobOwnerCredits(address indexed jobOwner, address indexed to, uint256 amount);
-  event JobTransfer(bytes32 indexed jobKey, address indexed from, address indexed to);
+  event InitiateJobTransfer(bytes32 indexed jobKey, address indexed from, address indexed to);
+  event AcceptJobTransfer(bytes32 indexed jobKey_, address indexed to_);
   event SetJobConfig(bytes32 indexed jobKey, bool isActive_, bool useJobOwnerCredits_, bool assertResolverSelector_);
   event SetJobResolver(bytes32 indexed jobKey, address resolverAddress, bytes resolverCalldata);
   event SetJobPreDefinedCalldata(bytes32 indexed jobKey, bytes preDefinedCalldata);
@@ -162,6 +164,8 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   mapping(bytes32 => address) public jobOwners;
   // keccak256(jobAddress, id) => resolver(address,calldata)
   mapping(bytes32 => Resolver) internal resolvers;
+  // keccak256(jobAddress, id) => pendingAddress
+  mapping(bytes32 => address) public jobPendingTransfers;
 
   // jobAddress => nextIdToRegister(actually uint24)
   mapping(address => uint256) public jobNextIds;
@@ -756,15 +760,32 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   }
 
   /**
-   * A job owner transfer the job to a new owner.
+   * A job owner initiates the job transfer to a new owner.
+   * The actual owner doesn't update until the pending owner accepts the transfer.
    *
    * @param jobKey_ The jobKey
    * @param to_ The new job owner
    */
-  function transferJob(bytes32 jobKey_, address to_) external {
+  function initiateJobTransfer(bytes32 jobKey_, address to_) external {
     _assertOnlyJobOwner(jobKey_);
-    jobOwners[jobKey_] = to_;
-    emit JobTransfer(jobKey_, msg.sender, to_);
+    jobPendingTransfers[jobKey_] = to_;
+    emit InitiateJobTransfer(jobKey_, msg.sender, to_);
+  }
+
+  /**
+   * A pending job owner accepts the job transfer.
+   *
+   * @param jobKey_ The jobKey
+   */
+  function acceptJobTransfer(bytes32 jobKey_) external {
+    if (msg.sender != jobPendingTransfers[jobKey_]) {
+      revert OnlyPendingOwner();
+    }
+
+    jobOwners[jobKey_] = msg.sender;
+    delete jobPendingTransfers[jobKey_];
+
+    emit AcceptJobTransfer(jobKey_, msg.sender);
   }
 
   /**
