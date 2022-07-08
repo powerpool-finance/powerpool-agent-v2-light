@@ -88,7 +88,8 @@ contract ExecuteSelectorTest is TestHelper {
     vm.prank(owner);
     agent.setAgentParams(5_001 ether, 1, 1);
 
-    assertEq(agent.minKeeperCvp(), 5_001 ether);
+    (uint256 minKeeperCvp,,,) = agent.getConfig();
+    assertEq(minKeeperCvp, 5_001 ether);
     assertEq(_stakeOf(kid), 5_000 ether);
 
     vm.expectRevert(PPAgentV2.InsufficientKeeperStake.selector);
@@ -108,7 +109,8 @@ contract ExecuteSelectorTest is TestHelper {
     vm.prank(alice);
     agent.updateJob(jobKey, 200, 55, 20, 5001 ether, 60);
 
-    assertEq(agent.minKeeperCvp(), 3_000 ether);
+    (uint256 minKeeperCvp,,,) = agent.getConfig();
+    assertEq(minKeeperCvp, 3_000 ether);
     assertEq(_stakeOf(kid), 5_000 ether);
     assertEq(agent.jobMinKeeperCvp(jobKey), 5001 ether);
 

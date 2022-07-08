@@ -148,10 +148,10 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     uint96 cvpStake;
   }
 
-  uint256 public minKeeperCvp;
-  uint256 public pendingWithdrawalTimeoutSeconds;
-  uint256 public feeTotal;
-  uint256 public feePpm;
+  uint256 internal minKeeperCvp;
+  uint256 internal pendingWithdrawalTimeoutSeconds;
+  uint256 internal feeTotal;
+  uint256 internal feePpm;
   uint256 internal nextKeeperId;
 
   // keccak256(jobAddress, id) => ethBalance
@@ -1151,6 +1151,22 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
       return (gasUsed_ + JOB_RUN_GAS_OVERHEAD) * blockBaseFee_ * rewardPct_ / 100
              + fixedReward_ * FIXED_PAYMENT_MULTIPLIER;
     }
+  }
+
+  function getConfig()
+    external view returns (
+      uint256 minKeeperCvp_,
+      uint256 pendingWithdrawalTimeoutSeconds_,
+      uint256 feeTotal_,
+      uint256 feePpm_
+    )
+  {
+    return (
+      minKeeperCvp,
+      pendingWithdrawalTimeoutSeconds,
+      feeTotal,
+      feePpm
+    );
   }
 
   function getKeeper(uint256 keeperId_)

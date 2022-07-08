@@ -69,7 +69,8 @@ contract JobOwnerTest is TestHelper {
     assertEq(alice.balance, aliceBalanceBefore - deposit1);
 
     assertEq(agent.jobOwnerCredits(bob), amount1);
-    assertEq(agent.feeTotal(), fee1);
+    (,,uint256 feeTotal,) = agent.getConfig();
+    assertEq(feeTotal, fee1);
 
     // 2nd deposit
     uint256 fee2 = uint256(deposit2) * 4e4 / 1e6;
@@ -82,7 +83,8 @@ contract JobOwnerTest is TestHelper {
     assertEq(agent.jobOwnerCredits(bob), uint256(amount1) + uint256(amount2));
     assertEq(alice.balance, aliceBalanceBefore - deposit1);
     assertEq(bob.balance, bobBalanceBefore - deposit2);
-    assertEq(agent.feeTotal(), fee1 + fee2);
+    (,,feeTotal,) = agent.getConfig();
+    assertEq(feeTotal, fee1 + fee2);
   }
 
   function testErrAddJobOwnerCreditsZeroDeposit() public {

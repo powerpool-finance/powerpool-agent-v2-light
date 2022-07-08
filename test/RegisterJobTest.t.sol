@@ -455,7 +455,8 @@ contract RegisterJob is TestHelper {
     });
 
     assertEq(agent.getJob(jobKey).credits, 9.6 ether);
-    assertEq(agent.feeTotal(), 0.4 ether);
+    (,,uint256 feeTotal,) = agent.getConfig();
+    assertEq(feeTotal, 0.4 ether);
   }
 
   function testShouldAllowDepositToTheOwnerBalanceNoFee() public {
@@ -492,7 +493,8 @@ contract RegisterJob is TestHelper {
 
     assertEq(agent.getJob(jobKey).credits, 0);
     assertEq(agent.jobOwnerCredits(bob), 9.6 ether);
-    assertEq(agent.feeTotal(), 0.4 ether);
+    (,,uint256 feeTotal,) = agent.getConfig();
+    assertEq(feeTotal, 0.4 ether);
   }
 
   function testErrDepositToTheJobBalanceOverflow() public {
