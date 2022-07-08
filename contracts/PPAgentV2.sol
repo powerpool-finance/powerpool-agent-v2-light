@@ -86,7 +86,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     bytes32 binJobAfter
   );
   event WithdrawFees(address indexed to, uint256 amount);
-  event Slash(uint256 indexed keeperId, address indexed to, uint256 slashAmount);
+  event Slash(uint256 indexed keeperId, address indexed to, uint256 currentAmount, uint256 pendingAmount);
   event RegisterAsKeeper(uint256 indexed keeperId, address indexed keeperAdmin, address indexed keeperWorker);
   event SetWorkerAddress(uint256 indexed keeperId, address indexed worker);
   event Stake(uint256 indexed keeperId, uint256 amount, address staker, address receiver);
@@ -1072,18 +1072,26 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    *
    * @param keeperId_ The keeper ID to slash
    * @param to_ The address to send the slashed CVP to
-   * @param amount_ The slash amount
+   * @param currentAmount_ The amount to slash from the current keeper.cvpStake balance
+   * @param pendingAmount_ The amount to slash from the pendingWithdrawals balance
    */
-  function slash(uint256 keeperId_, address to_, uint256 amount_) external {
+  function slash(uint256 keeperId_, address to_, uint256 currentAmount_, uint256 pendingAmount_) external {
     _assertOnlyOwner();
-    _assertNonZeroAmount(amount_);
+    uint256 totalAmount = currentAmount_ + pendingAmount_;
+    _assertNonZeroAmount(totalAmount);
 
-    keepers[keeperId_].cvpStake -= uint96(amount_);
-    slashedStakeOf[keeperId_] += amount_;
+    if (currentAmount_ > 0) {
+      keepers[keeperId_].cvpStake -= uint96(currentAmount_);
+      slashedStakeOf[keeperId_] += currentAmount_;
+    }
 
-    CVP.transfer(to_, amount_);
+    if (pendingAmount_ > 0) {
+      pendingWithdrawalAmounts[keeperId_] -= pendingAmount_;
+    }
 
-    emit Slash(keeperId_, to_, amount_);
+    CVP.transfer(to_, totalAmount);
+
+    emit Slash(keeperId_, to_, currentAmount_, pendingAmount_);
   }
 
   /**
