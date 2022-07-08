@@ -157,15 +157,15 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   // keccak256(jobAddress, id) => ethBalance
   mapping(bytes32 => Job) internal jobs;
   // keccak256(jobAddress, id) => customCalldata
-  mapping(bytes32 => bytes) public preDefinedCalldatas;
+  mapping(bytes32 => bytes) internal preDefinedCalldatas;
   // keccak256(jobAddress, id) => minKeeperCvpStake
-  mapping(bytes32 => uint256) public jobMinKeeperCvp;
+  mapping(bytes32 => uint256) internal jobMinKeeperCvp;
   // keccak256(jobAddress, id) => owner
-  mapping(bytes32 => address) public jobOwners;
+  mapping(bytes32 => address) internal jobOwners;
   // keccak256(jobAddress, id) => resolver(address,calldata)
   mapping(bytes32 => Resolver) internal resolvers;
   // keccak256(jobAddress, id) => pendingAddress
-  mapping(bytes32 => address) public jobPendingTransfers;
+  mapping(bytes32 => address) internal jobPendingTransfers;
 
   // jobAddress => nextIdToRegister(actually uint24)
   mapping(address => uint256) public jobNextIds;
@@ -1199,12 +1199,24 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     );
   }
 
-  function getResolver(bytes32 jobKey_) external view returns (Resolver memory) {
-    return resolvers[jobKey_];
-  }
-
-  function getJob(bytes32 jobKey_) external view returns (Job memory) {
-    return jobs[jobKey_];
+  function getJob(bytes32 jobKey_)
+    external view returns (
+      address owner,
+      address pendingTransfer,
+      uint256 jobLevelMinKeeperCvp,
+      Job memory details,
+      bytes memory preDefinedCalldata,
+      Resolver memory resolver
+    )
+  {
+    return (
+      jobOwners[jobKey_],
+      jobPendingTransfers[jobKey_],
+      jobMinKeeperCvp[jobKey_],
+      jobs[jobKey_],
+      preDefinedCalldatas[jobKey_],
+      resolvers[jobKey_]
+    );
   }
 
   /**

@@ -89,7 +89,7 @@ contract JobManagementTest is TestHelper {
     vm.prank(alice);
     agent.depositJobCredits{ value: 1.2 ether}(jobKey);
 
-    PPAgentV2.Job memory job = agent.getJob(jobKey);
+    PPAgentV2.Job memory job = _jobDetails(jobKey);
     assertEq(job.credits, 1.2 ether);
 
     assertEq(alice.balance, aliceBalanceBefore - 1.2 ether);
@@ -100,7 +100,7 @@ contract JobManagementTest is TestHelper {
     vm.prank(alice);
     agent.depositJobCredits{ value: 3.6 ether}(jobKey);
 
-    job = agent.getJob(jobKey);
+    job = _jobDetails(jobKey);
     assertEq(job.credits, 4.8 ether);
 
     assertEq(alice.balance, aliceBalanceBefore - 4.8 ether);
@@ -111,12 +111,12 @@ contract JobManagementTest is TestHelper {
     vm.deal(alice, maxAmount);
     uint256 aliceBalanceBefore = alice.balance;
 
-    assertEq(agent.getJob(jobKey).credits, 0);
+    assertEq(_jobDetails(jobKey).credits, 0);
 
     vm.prank(alice);
     agent.depositJobCredits{ value: maxAmount }(jobKey);
 
-    assertEq(agent.getJob(jobKey).credits, maxAmount);
+    assertEq(_jobDetails(jobKey).credits, maxAmount);
     assertEq(alice.balance, aliceBalanceBefore - maxAmount);
   }
 
@@ -124,14 +124,14 @@ contract JobManagementTest is TestHelper {
     vm.prank(owner);
     agent.setAgentParams(3_000 ether, 30 days, 4e4);
 
-    assertEq(agent.getJob(jobKey).credits, 0);
+    assertEq(_jobDetails(jobKey).credits, 0);
 
     vm.expectEmit(true, true, false, true, address(agent));
     emit DepositJobCredits(jobKey, alice, 9.6 ether, 0.4 ether);
     vm.prank(alice);
     agent.depositJobCredits{value: 10 ether}(jobKey);
 
-    assertEq(agent.getJob(jobKey).credits, 9.6 ether);
+    assertEq(_jobDetails(jobKey).credits, 9.6 ether);
     (,,uint256 feeTotal,) = agent.getConfig();
     assertEq(feeTotal, 0.4 ether);
 
@@ -140,7 +140,7 @@ contract JobManagementTest is TestHelper {
     vm.prank(alice);
     agent.depositJobCredits{value: 20 ether}(jobKey);
 
-    assertEq(agent.getJob(jobKey).credits, 28.8 ether);
+    assertEq(_jobDetails(jobKey).credits, 28.8 ether);
     (,,feeTotal,) = agent.getConfig();
     assertEq(feeTotal, 1.2 ether);
   }
@@ -207,7 +207,7 @@ contract JobManagementTest is TestHelper {
     vm.prank(alice);
     agent.withdrawJobCredits(jobKey, bob, 0.8 ether);
 
-    PPAgentV2.Job memory job = agent.getJob(jobKey);
+    PPAgentV2.Job memory job = _jobDetails(jobKey);
     assertEq(job.credits, 0.4 ether);
 
     assertEq(bob.balance, bobBalanceBefore + 0.8 ether);
@@ -216,7 +216,7 @@ contract JobManagementTest is TestHelper {
     vm.prank(alice);
     agent.withdrawJobCredits(jobKey, bob, 0.4 ether);
 
-    job = agent.getJob(jobKey);
+    job = _jobDetails(jobKey);
     assertEq(job.credits, 0 ether);
 
     assertEq(bob.balance, bobBalanceBefore + 1.2 ether);
@@ -234,7 +234,7 @@ contract JobManagementTest is TestHelper {
     agent.withdrawJobCredits(jobKey, bob, type(uint256).max);
 
     assertEq(bob.balance, bobBalanceBefore + 1.2 ether);
-    PPAgentV2.Job memory job = agent.getJob(jobKey);
+    PPAgentV2.Job memory job = _jobDetails(jobKey);
     assertEq(job.credits, 0 ether);
   }
 
@@ -287,7 +287,7 @@ contract JobManagementTest is TestHelper {
   // jobTransfer()
 
   function testJobTransfer() public {
-    assertEq(agent.jobOwners(jobKey), alice);
+    assertEq(_jobOwner(jobKey), alice);
 
     // Initiate...
     vm.expectEmit(true, true, true, true, address(agent));
@@ -295,8 +295,8 @@ contract JobManagementTest is TestHelper {
     vm.prank(alice);
     agent.initiateJobTransfer(jobKey, bob);
 
-    assertEq(agent.jobOwners(jobKey), alice);
-    assertEq(agent.jobPendingTransfers(jobKey), bob);
+    assertEq(_jobOwner(jobKey), alice);
+    assertEq(_jobPendingOwner(jobKey), bob);
 
     // Accept...
     vm.expectEmit(true, true, true, true, address(agent));
@@ -304,31 +304,31 @@ contract JobManagementTest is TestHelper {
     vm.prank(bob);
     agent.acceptJobTransfer(jobKey);
 
-    assertEq(agent.jobOwners(jobKey), bob);
-    assertEq(agent.jobPendingTransfers(jobKey), address(0));
+    assertEq(_jobOwner(jobKey), bob);
+    assertEq(_jobPendingOwner(jobKey), address(0));
   }
 
   function testJobTransferOwnerCanCancelJobTransfer() public {
-    assertEq(agent.jobOwners(jobKey), alice);
-    assertEq(agent.jobPendingTransfers(jobKey), address(0));
+    assertEq(_jobOwner(jobKey), alice);
+    assertEq(_jobPendingOwner(jobKey), address(0));
 
     vm.prank(alice);
     agent.initiateJobTransfer(jobKey, bob);
 
-    assertEq(agent.jobOwners(jobKey), alice);
-    assertEq(agent.jobPendingTransfers(jobKey), bob);
+    assertEq(_jobOwner(jobKey), alice);
+    assertEq(_jobPendingOwner(jobKey), bob);
 
     vm.prank(alice);
     agent.initiateJobTransfer(jobKey, alice);
 
-    assertEq(agent.jobOwners(jobKey), alice);
-    assertEq(agent.jobPendingTransfers(jobKey), alice);
+    assertEq(_jobOwner(jobKey), alice);
+    assertEq(_jobPendingOwner(jobKey), alice);
 
     vm.prank(alice);
     agent.acceptJobTransfer(jobKey);
 
-    assertEq(agent.jobOwners(jobKey), alice);
-    assertEq(agent.jobPendingTransfers(jobKey), address(0));
+    assertEq(_jobOwner(jobKey), alice);
+    assertEq(_jobPendingOwner(jobKey), address(0));
   }
 
   function testErrJobTransferNotPending() public {
@@ -405,7 +405,7 @@ contract JobManagementTest is TestHelper {
   // updateJob()
 
   function testUpdateJob() public {
-    PPAgentV2.Job memory job = agent.getJob(jobKey);
+    PPAgentV2.Job memory job = _jobDetails(jobKey);
     assertEq(job.maxBaseFeeGwei, 100);
     assertEq(job.rewardPct, 35);
     assertEq(job.fixedReward, 10);
@@ -425,56 +425,56 @@ contract JobManagementTest is TestHelper {
       intervalSeconds_: 60
     });
 
-    job = agent.getJob(jobKey);
+    job = _jobDetails(jobKey);
     assertEq(job.maxBaseFeeGwei, 200);
     assertEq(job.rewardPct, 55);
     assertEq(job.fixedReward, 20);
     assertEq(job.intervalSeconds, 60);
-    assertEq(agent.jobMinKeeperCvp(jobKey), 30);
+    assertEq(_jobMinKeeperCvp(jobKey), 30);
   }
 
   function testUpdateJobToggleMinKeeperCvpFlag() public {
-    PPAgentV2.Job memory job = agent.getJob(jobKey);
+    PPAgentV2.Job memory job = _jobDetails(jobKey);
     (bool active,,,bool checkKeeperMinCvpDeposit) = lens.parseConfigPure(job.config);
     assertEq(active, true);
     assertEq(checkKeeperMinCvpDeposit, false);
-    assertEq(agent.jobMinKeeperCvp(jobKey), 0);
+    assertEq(_jobMinKeeperCvp(jobKey), 0);
 
     // 1. Toggle to true
     vm.prank(alice);
     agent.updateJob(jobKey, 200, 55, 20, 10, 60);
-    job = agent.getJob(jobKey);
+    job = _jobDetails(jobKey);
     (,,,checkKeeperMinCvpDeposit) = lens.parseConfigPure(job.config);
     assertEq(active, true);
     assertEq(checkKeeperMinCvpDeposit, true);
-    assertEq(agent.jobMinKeeperCvp(jobKey), 10);
+    assertEq(_jobMinKeeperCvp(jobKey), 10);
 
     // 2. Set another positive value
     vm.prank(alice);
     agent.updateJob(jobKey, 200, 55, 20, 20, 60);
-    job = agent.getJob(jobKey);
+    job = _jobDetails(jobKey);
     (,,,checkKeeperMinCvpDeposit) = lens.parseConfigPure(job.config);
     assertEq(active, true);
     assertEq(checkKeeperMinCvpDeposit, true);
-    assertEq(agent.jobMinKeeperCvp(jobKey), 20);
+    assertEq(_jobMinKeeperCvp(jobKey), 20);
 
     // 3. Toggle to negative
     vm.prank(alice);
     agent.updateJob(jobKey, 200, 55, 20, 0, 60);
-    job = agent.getJob(jobKey);
+    job = _jobDetails(jobKey);
     (,,,checkKeeperMinCvpDeposit) = lens.parseConfigPure(job.config);
     assertEq(active, true);
     assertEq(checkKeeperMinCvpDeposit, false);
-    assertEq(agent.jobMinKeeperCvp(jobKey), 0);
+    assertEq(_jobMinKeeperCvp(jobKey), 0);
 
     // 4. Still negative
     vm.prank(alice);
     agent.updateJob(jobKey, 200, 55, 20, 0, 60);
-    job = agent.getJob(jobKey);
+    job = _jobDetails(jobKey);
     (,,,checkKeeperMinCvpDeposit) = lens.parseConfigPure(job.config);
     assertEq(active, true);
     assertEq(checkKeeperMinCvpDeposit, false);
-    assertEq(agent.jobMinKeeperCvp(jobKey), 0);
+    assertEq(_jobMinKeeperCvp(jobKey), 0);
   }
 
   function testErrUpdateJobNotOwner() public {
@@ -544,7 +544,7 @@ contract JobManagementTest is TestHelper {
   // setJobResolver()
 
   function testSetJobResolver() public jobWithResolverCalldataSource {
-    PPAgentV2.Resolver memory current = agent.getResolver(jobKey);
+    PPAgentV2.Resolver memory current = _jobResolver(jobKey);
     assertEq(current.resolverAddress, address(1));
     assertEq(current.resolverCalldata, new bytes(0));
 
@@ -555,7 +555,7 @@ contract JobManagementTest is TestHelper {
     vm.prank(alice);
     agent.setJobResolver(jobKey, newResolver);
 
-    current = agent.getResolver(jobKey);
+    current = _jobResolver(jobKey);
     assertEq(current.resolverAddress, address(2));
     assertEq(current.resolverCalldata, hex"313373");
   }
@@ -592,14 +592,14 @@ contract JobManagementTest is TestHelper {
   // setPreDefinedCalldata()
 
   function testSetPreDefinedCalldata() public jobWithPreDefinedCalldataSource {
-    assertEq(agent.preDefinedCalldatas(jobKey), new bytes(0));
+    assertEq(_jobPreDefinedCalldata(jobKey), new bytes(0));
 
     vm.expectEmit(true, true, false, true, address(agent));
     emit SetJobPreDefinedCalldata(jobKey, hex"313373");
     vm.prank(alice);
     agent.setJobPreDefinedCalldata(jobKey, hex"313373");
 
-    assertEq(agent.preDefinedCalldatas(jobKey), hex"313373");
+    assertEq(_jobPreDefinedCalldata(jobKey), hex"313373");
   }
 
   function testErrSetPreDefinedCalldataNotOwner() public {

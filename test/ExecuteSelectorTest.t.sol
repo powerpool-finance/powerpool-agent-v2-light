@@ -112,7 +112,7 @@ contract ExecuteSelectorTest is TestHelper {
     (uint256 minKeeperCvp,,,) = agent.getConfig();
     assertEq(minKeeperCvp, 3_000 ether);
     assertEq(_stakeOf(kid), 5_000 ether);
-    assertEq(agent.jobMinKeeperCvp(jobKey), 5001 ether);
+    assertEq(_jobMinKeeperCvp(jobKey), 5001 ether);
 
     vm.expectRevert(PPAgentV2.InsufficientJobScopedKeeperStake.selector);
 
@@ -148,7 +148,7 @@ contract ExecuteSelectorTest is TestHelper {
   }
 
   function testErrExecIntervalNotReachedYet() public {
-    assertEq(agent.getJob(jobKey).lastExecutionAt, 0);
+    assertEq(_jobDetails(jobKey).lastExecutionAt, 0);
     vm.prank(keeperWorker, keeperWorker);
     _callExecuteHelper(
       agent,
@@ -158,7 +158,7 @@ contract ExecuteSelectorTest is TestHelper {
       kid,
       new bytes(0)
     );
-    assertEq(agent.getJob(jobKey).lastExecutionAt, block.timestamp);
+    assertEq(_jobDetails(jobKey).lastExecutionAt, block.timestamp);
     assertEq(counter.current(), 1);
 
     vm.warp(block.timestamp + 3);
@@ -189,7 +189,7 @@ contract ExecuteSelectorTest is TestHelper {
       kid,
       new bytes(0)
     );
-    assertEq(agent.getJob(jobKey).lastExecutionAt, block.timestamp);
+    assertEq(_jobDetails(jobKey).lastExecutionAt, block.timestamp);
     assertEq(counter.current(), 2);
   }
 
@@ -219,7 +219,7 @@ contract ExecuteSelectorTest is TestHelper {
   function testAcceptBaseFeeGtGasPrice() public {
     vm.fee(500 gwei);
     assertEq(block.basefee, 500 gwei);
-    assertEq(agent.getJob(jobKey).maxBaseFeeGwei, 100);
+    assertEq(_jobDetails(jobKey).maxBaseFeeGwei, 100);
     uint256 flags = _config({
       acceptMaxBaseFeeLimit: true,
       accrueReward: false
@@ -248,7 +248,7 @@ contract ExecuteSelectorTest is TestHelper {
   function testAcceptBaseFeeLtGasPrice() public {
     vm.fee(10 gwei);
     assertEq(block.basefee, 10 gwei);
-    assertEq(agent.getJob(jobKey).maxBaseFeeGwei, 100);
+    assertEq(_jobDetails(jobKey).maxBaseFeeGwei, 100);
     uint256 flags = _config({
       acceptMaxBaseFeeLimit: true,
       accrueReward: false
@@ -289,10 +289,10 @@ contract ExecuteSelectorTest is TestHelper {
 
   function testExecSelfPayByJobCredits() public {
     vm.fee(99 gwei);
-    address jobOwner = agent.jobOwners(jobKey);
+    address jobOwner = _jobOwner(jobKey);
 
     uint256 keeperBalanceBefore = keeperWorker.balance;
-    uint256 jobCreditsBefore = agent.getJob(jobKey).credits;
+    uint256 jobCreditsBefore = _jobDetails(jobKey).credits;
     uint256 ownerCreditsBefore = agent.jobOwnerCredits(jobOwner);
     uint256 compensationsBefore = _compensationOf(kid);
 
@@ -307,7 +307,7 @@ contract ExecuteSelectorTest is TestHelper {
     );
 
     uint256 keeperBalanceChange = keeperWorker.balance - keeperBalanceBefore;
-    uint256 jobCreditsChange = jobCreditsBefore - agent.getJob(jobKey).credits;
+    uint256 jobCreditsChange = jobCreditsBefore - _jobDetails(jobKey).credits;
     uint256 jobOwnerCreditsChange = ownerCreditsBefore - agent.jobOwnerCredits(jobOwner);
     uint256 compensationsChange = _compensationOf(kid) - compensationsBefore;
 
@@ -321,10 +321,10 @@ contract ExecuteSelectorTest is TestHelper {
 
   function testExecAccrueRewardByJobCredits() public {
     vm.fee(99 gwei);
-    address jobOwner = agent.jobOwners(jobKey);
+    address jobOwner = _jobOwner(jobKey);
 
     uint256 keeperBalanceBefore = keeperWorker.balance;
-    uint256 jobCreditsBefore = agent.getJob(jobKey).credits;
+    uint256 jobCreditsBefore = _jobDetails(jobKey).credits;
     uint256 compensationsBefore = _compensationOf(kid);
     uint256 ownerCreditsBefore = agent.jobOwnerCredits(jobOwner);
 
@@ -345,7 +345,7 @@ contract ExecuteSelectorTest is TestHelper {
     );
 
     uint256 keeperBalanceChange = keeperWorker.balance - keeperBalanceBefore;
-    uint256 jobCreditsChange = jobCreditsBefore - agent.getJob(jobKey).credits;
+    uint256 jobCreditsChange = jobCreditsBefore - _jobDetails(jobKey).credits;
     uint256 jobOwnerCreditsChange = ownerCreditsBefore - agent.jobOwnerCredits(jobOwner);
     uint256 compensationsChange = _compensationOf(kid) - compensationsBefore;
 
@@ -360,7 +360,7 @@ contract ExecuteSelectorTest is TestHelper {
     // Exec #2
     vm.warp(block.timestamp + 31);
     compensationsBefore = _compensationOf(kid);
-    jobCreditsBefore = agent.getJob(jobKey).credits;
+    jobCreditsBefore = _jobDetails(jobKey).credits;
     vm.prank(keeperWorker, keeperWorker);
     _callExecuteHelper(
       agent,
@@ -371,13 +371,13 @@ contract ExecuteSelectorTest is TestHelper {
       new bytes(0)
     );
     compensationsChange = _compensationOf(kid) - compensationsBefore;
-    jobCreditsChange = jobCreditsBefore - agent.getJob(jobKey).credits;
+    jobCreditsChange = jobCreditsBefore - _jobDetails(jobKey).credits;
     assertEq(compensationsChange, jobCreditsChange);
   }
 
   function testExecSelfPayByJobOwnerCredits() public {
     vm.fee(99 gwei);
-    address jobOwner = agent.jobOwners(jobKey);
+    address jobOwner = _jobOwner(jobKey);
 
     vm.deal(alice, 2 ether);
     vm.prank(alice);
@@ -387,7 +387,7 @@ contract ExecuteSelectorTest is TestHelper {
     agent.setJobConfig(jobKey, true, true, false);
 
     uint256 keeperBalanceBefore = keeperWorker.balance;
-    uint256 jobCreditsBefore = agent.getJob(jobKey).credits;
+    uint256 jobCreditsBefore = _jobDetails(jobKey).credits;
     uint256 ownerCreditsBefore = agent.jobOwnerCredits(jobOwner);
     uint256 compensationsBefore = _compensationOf(kid);
 
@@ -402,7 +402,7 @@ contract ExecuteSelectorTest is TestHelper {
     );
 
     uint256 keeperBalanceChange = keeperWorker.balance - keeperBalanceBefore;
-    uint256 jobCreditsChange = jobCreditsBefore - agent.getJob(jobKey).credits;
+    uint256 jobCreditsChange = jobCreditsBefore - _jobDetails(jobKey).credits;
     uint256 jobOwnerCreditsChange = ownerCreditsBefore - agent.jobOwnerCredits(jobOwner);
     uint256 compensationsChange = _compensationOf(kid) - compensationsBefore;
 
@@ -418,7 +418,7 @@ contract ExecuteSelectorTest is TestHelper {
     vm.fee(99 gwei);
     vm.prank(alice);
     agent.withdrawJobCredits(jobKey, alice, 0.9999 ether);
-    assertEq(agent.getJob(jobKey).credits, 0.0001 ether);
+    assertEq(_jobDetails(jobKey).credits, 0.0001 ether);
 
     // TODO: assert only revert+error selector
     // vm.expectRevert(abi.encodeWithSelector(PPAgentV2.InsufficientJobCredits.selector))

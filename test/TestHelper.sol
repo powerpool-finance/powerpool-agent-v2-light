@@ -71,6 +71,36 @@ contract TestHelper is Test, PPAgentV2Flags {
     return worker;
   }
 
+  function _jobOwner(bytes32 jobKey_) internal view returns (address) {
+    (address jobOwner,,,,,) = agent.getJob(jobKey_);
+    return jobOwner;
+  }
+
+  function _jobPendingOwner(bytes32 jobKey_) internal view returns (address) {
+    (,address pendingOwner,,,,) = agent.getJob(jobKey_);
+    return pendingOwner;
+  }
+
+  function _jobMinKeeperCvp(bytes32 jobKey_) internal view returns (uint256) {
+    (,,uint256 jobMinKeeperCvp,,,) = agent.getJob(jobKey_);
+    return jobMinKeeperCvp;
+  }
+
+  function _jobDetails(bytes32 jobKey_) internal view returns (PPAgentV2.Job memory) {
+    (,,,PPAgentV2.Job memory details,,) = agent.getJob(jobKey_);
+    return details;
+  }
+
+  function _jobPreDefinedCalldata(bytes32 jobKey_) internal view returns (bytes memory) {
+    (,,,,bytes memory preDefinedCalldata,) = agent.getJob(jobKey_);
+    return preDefinedCalldata;
+  }
+
+  function _jobResolver(bytes32 jobKey_) internal view returns (PPAgentV2.Resolver memory) {
+    (,,,,,PPAgentV2.Resolver memory resolver) = agent.getJob(jobKey_);
+    return resolver;
+  }
+
   function _callExecuteHelper(
     IPPAgentV2 agent_,
     address jobAddress_,
