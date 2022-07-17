@@ -7,12 +7,13 @@ import "./ICounter.sol";
 contract SimpleCalldataIntervalTestJob is ICounter, AgentJob {
   event Increment(address pokedBy, uint256 newCurrent);
 
-  uint256 public constant INTERVAL = 30;
+  uint256 public immutable INTERVAL;
 
   uint256 public current;
   uint256 public lastChangeAt;
 
-  constructor(address agent_) AgentJob (agent_) {
+  constructor(address agent_, uint256 interval_) AgentJob (agent_) {
+    INTERVAL = interval_;
   }
 
   function myResolver(string calldata pass) external view override returns (bool, bytes memory) {

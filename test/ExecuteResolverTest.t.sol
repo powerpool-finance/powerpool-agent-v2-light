@@ -273,7 +273,7 @@ contract ExecuteResolverTest is TestHelper {
   // INTERVAL
 
   function testErrExecResolverTooEarly() public {
-    job = new SimpleCalldataIntervalTestJob(address(agent));
+    job = new SimpleCalldataIntervalTestJob(address(agent), 30);
     assertEq(job.current(), 0);
     _setupJob(address(job), SimpleCalldataIntervalTestJob.increment.selector, false);
 

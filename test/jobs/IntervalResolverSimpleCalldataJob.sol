@@ -6,12 +6,13 @@ import "../../contracts/jobs/traits/AgentJob.sol";
 contract IntervalResolverSimpleCalldataJob is AgentJob {
   event Increment(address pokedBy, uint256 newCurrent);
 
-  uint256 public constant INTERVAL = 30;
+  uint256 public immutable INTERVAL;
 
   uint256 public lastChangeAt;
   uint256 public current;
 
-  constructor(address agent_) AgentJob (agent_) {
+  constructor(address agent_, uint256 interval_) AgentJob (agent_) {
+    INTERVAL = interval_;
   }
 
   function myResolver() external view returns (bool ok, bytes memory cd) {
