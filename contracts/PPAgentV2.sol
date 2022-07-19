@@ -243,8 +243,8 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   }
 
   constructor(address owner_, address cvp_, uint256 minKeeperCvp_, uint256 pendingWithdrawalTimeoutSeconds_)
-    ERC20("PPAgentLite Staked CVP", "paCVP")
-    ERC20Permit("PPAgentLite Staked CVP")
+    ERC20("PPAgentV2 Staked CVP", "paCVP")
+    ERC20Permit("PPAgentV2 Staked CVP")
   {
     minKeeperCvp = minKeeperCvp_;
     CVP = IERC20(cvp_);
