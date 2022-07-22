@@ -68,7 +68,7 @@ contract AgentOwnerTest is TestHelper {
 
   function testWithdrawFees() public {
     vm.deal(address(agent), 30 ether);
-    vm.store(address(agent), bytes32(uint256(10))/* feeTotal slot */, bytes32(uint256(20 ether)));
+    vm.store(address(agent), bytes32(uint256(3))/* feeTotal slot */, bytes32(uint256(20 ether)));
 
     assertEq(address(agent).balance, 30 ether);
     (,,uint256 feeTotal,) = agent.getConfig();

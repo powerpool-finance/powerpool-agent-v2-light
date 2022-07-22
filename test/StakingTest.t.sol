@@ -26,38 +26,31 @@ contract StakingTest is TestHelper {
     vm.assume(amount1 > 0 && amount2 > 0);
 
     uint256 keeperAdminBalanceBefore = cvp.balanceOf(keeperAdmin);
-    assertEq(agent.balanceOf(keeperAdmin), 6_000 ether);
     assertEq(_stakeOf(kid1), 3_000 ether);
     assertEq(cvp.balanceOf(keeperAdmin), keeperAdminBalanceBefore);
-    assertEq(cvp.balanceOf(address(agent)), 6_000 ether);
 
     vm.startPrank(keeperAdmin);
     cvp.approve(address(agent), amount1);
-    agent.stake(kid1, keeperAdmin, amount1);
+    agent.stake(kid1, amount1);
     vm.stopPrank();
 
-    assertEq(agent.balanceOf(keeperAdmin), amount1 + 6_000 ether);
     assertEq(_stakeOf(kid1), amount1 + 3_000 ether);
     assertEq(cvp.balanceOf(keeperAdmin), keeperAdminBalanceBefore - amount1);
     assertEq(cvp.balanceOf(address(agent)), amount1 + 6_000 ether);
   }
 
   function testDepositForTheNonOwnedKid() public {
-    assertEq(agent.balanceOf(keeperAdmin), 6_000 ether);
     assertEq(_stakeOf(kid1), 3_000 ether);
-    assertEq(agent.balanceOf(charlie), 0 ether);
 
     vm.prank(keeperAdmin);
     cvp.transfer(bob, 3_500 ether);
 
     vm.startPrank(bob);
     cvp.approve(address(agent), 3_500 ether);
-    agent.stake(kid1, charlie, 3_500 ether);
+    agent.stake(kid1, 3_500 ether);
     vm.stopPrank();
 
-    assertEq(agent.balanceOf(keeperAdmin), 6_000 ether);
     assertEq(_stakeOf(kid1), 6_500 ether);
-    assertEq(agent.balanceOf(charlie), 3_500 ether);
     assertEq(_stakeOf(kid0), 3_000 ether);
   }
 
@@ -67,10 +60,9 @@ contract StakingTest is TestHelper {
 
     uint256 keeperAdminBalanceBefore = cvp.balanceOf(keeperAdmin);
     cvp.approve(address(agent), amount);
-    agent.stake(kid1, keeperAdmin, amount);
+    agent.stake(kid1, amount);
 
     assertEq(_stakeOf(kid1), amount + 3_000 ether);
-    assertEq(agent.balanceOf(keeperAdmin), amount + 6_000 ether);
     assertEq(cvp.balanceOf(keeperAdmin), keeperAdminBalanceBefore);
     assertEq(_pendingWithdrawalAmountOf(kid1), 0);
 
@@ -82,7 +74,6 @@ contract StakingTest is TestHelper {
     vm.expectRevert(abi.encodeWithSelector(PPAgentV2.WithdrawalTimoutNotReached.selector));
     agent.finalizeRedeem(kid1, keeperAdmin);
 
-    assertEq(agent.balanceOf(keeperAdmin), amount + 6_000 ether - 500 ether);
     assertEq(_stakeOf(kid1), amount + 3_000 ether - 500 ether);
     assertEq(cvp.balanceOf(keeperAdmin), keeperAdminBalanceBefore);
     assertEq(_pendingWithdrawalAmountOf(kid1), 500 ether);
@@ -91,7 +82,6 @@ contract StakingTest is TestHelper {
     vm.warp(block.timestamp + 1 days + 1);
     agent.finalizeRedeem(kid1, keeperAdmin);
 
-    assertEq(agent.balanceOf(keeperAdmin), amount + 6_000 ether - 500 ether);
     assertEq(_stakeOf(kid1), amount + 3_000 ether - 500 ether);
     assertEq(cvp.balanceOf(keeperAdmin), keeperAdminBalanceBefore + 500 ether);
 
@@ -103,7 +93,6 @@ contract StakingTest is TestHelper {
     agent.finalizeRedeem(kid1, keeperAdmin);
     vm.stopPrank();
 
-    assertEq(agent.balanceOf(keeperAdmin), 3_000 ether);
     assertEq(_stakeOf(kid1), 0);
     assertEq(cvp.balanceOf(keeperAdmin), keeperAdminBalanceBefore + amount + 3_000 ether);
     assertEq(_pendingWithdrawalAmountOf(kid1), 0);
@@ -112,7 +101,6 @@ contract StakingTest is TestHelper {
 
   function testRedeemAccumulatedToTheAdminAddress() public {
     assertEq(_stakeOf(kid1), 3_000 ether);
-    assertEq(agent.balanceOf(keeperAdmin), 6_000 ether);
     assertEq(cvp.balanceOf(keeperAdmin), 100_000_000 ether);
     assertEq(_pendingWithdrawalAmountOf(kid1), 0);
 
@@ -122,7 +110,6 @@ contract StakingTest is TestHelper {
     vm.expectRevert(abi.encodeWithSelector(PPAgentV2.WithdrawalTimoutNotReached.selector));
     agent.finalizeRedeem(kid1, keeperAdmin);
 
-    assertEq(agent.balanceOf(keeperAdmin), 5_500 ether);
     assertEq(_stakeOf(kid1), 2_500 ether);
     assertEq(cvp.balanceOf(keeperAdmin), 100_000_000 ether);
     assertEq(_pendingWithdrawalAmountOf(kid1), 500 ether);
@@ -132,7 +119,6 @@ contract StakingTest is TestHelper {
     vm.warp(block.timestamp + 1 days);
     agent.initiateRedeem(kid1, 500 ether);
 
-    assertEq(agent.balanceOf(keeperAdmin), 5_000 ether);
     assertEq(_stakeOf(kid1), 2_000 ether);
     assertEq(cvp.balanceOf(keeperAdmin), 100_000_000 ether);
     assertEq(_pendingWithdrawalAmountOf(kid1), 1_000 ether);
@@ -141,7 +127,6 @@ contract StakingTest is TestHelper {
     // Redeem #3
     vm.warp(block.timestamp + 4 days);
     agent.initiateRedeem(kid1, 2_000 ether);
-    assertEq(agent.balanceOf(keeperAdmin), 3_000 ether);
     assertEq(_stakeOf(kid1), 0);
     assertEq(cvp.balanceOf(keeperAdmin), 100_000_000 ether);
     assertEq(_pendingWithdrawalAmountOf(kid1), 3_000 ether);
@@ -150,7 +135,6 @@ contract StakingTest is TestHelper {
     // Finalize
     vm.warp(block.timestamp + 3 days + 1);
     agent.finalizeRedeem(kid1, keeperAdmin);
-    assertEq(agent.balanceOf(keeperAdmin), 3_000 ether);
     assertEq(_stakeOf(kid1), 0);
     assertEq(cvp.balanceOf(keeperAdmin), 100_003_000 ether);
     assertEq(_pendingWithdrawalAmountOf(kid1), 0);
@@ -167,9 +151,7 @@ contract StakingTest is TestHelper {
     vm.warp(block.timestamp + 3 days + 1);
     agent.finalizeRedeem(kid1, bob);
 
-    assertEq(agent.balanceOf(keeperAdmin), 5_500 ether);
     assertEq(_stakeOf(kid1), 2_500 ether);
-    assertEq(agent.balanceOf(bob), 0 ether);
     assertEq(cvp.balanceOf(bob), 500 ether);
 
     agent.initiateRedeem(kid1, 2_500 ether);
@@ -177,18 +159,11 @@ contract StakingTest is TestHelper {
     agent.finalizeRedeem(kid1, bob);
     vm.stopPrank();
 
-    assertEq(agent.balanceOf(keeperAdmin), 3_000 ether);
     assertEq(_stakeOf(kid1), 0);
     assertEq(cvp.balanceOf(bob), 3_000 ether);
   }
 
   function testRedeemWithNotEnoughStake() public {
-    cvp.approve(address(agent), 3_500 ether);
-    agent.stake(kid0, bob, 3_500 ether);
-
-    vm.prank(bob);
-    agent.transfer(keeperAdmin, 3_500 ether);
-
     vm.expectRevert(
       abi.encodeWithSelector(PPAgentV2.AmountGtStake.selector, 3_001 ether, 3_000 ether, 0)
     );
@@ -196,20 +171,11 @@ contract StakingTest is TestHelper {
     agent.initiateRedeem(kid1, 3_001 ether);
   }
 
-  function testRedeemWithNotEnoughErc20Tokens() public {
-    vm.prank(keeperAdmin);
-    agent.transfer(bob, 3_001 ether);
-
-    vm.prank(keeperAdmin);
-    vm.expectRevert(bytes("ERC20: burn amount exceeds balance"));
-    agent.initiateRedeem(kid1, 3_000 ether);
-  }
-
   function testErrStakeZero() public {
     vm.expectRevert(
       abi.encodeWithSelector(PPAgentV2.MissingAmount.selector)
     );
-    agent.stake(kid1, keeperAdmin, 0);
+    agent.stake(kid1, 0);
   }
 
   function testErrRedeemZero() public {

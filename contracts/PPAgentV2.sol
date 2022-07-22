@@ -3,8 +3,6 @@ pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "./PPAgentV2Flags.sol";
 
 library ConfigFlags {
@@ -21,7 +19,7 @@ interface IPPAgentV2 {
  * @title PowerAgentLite
  * @author PowerPool
  */
-contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
+contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable {
   error OnlyOwner();
   error NonEOASender();
   error InsufficientKeeperStake();
@@ -89,7 +87,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   event Slash(uint256 indexed keeperId, address indexed to, uint256 currentAmount, uint256 pendingAmount);
   event RegisterAsKeeper(uint256 indexed keeperId, address indexed keeperAdmin, address indexed keeperWorker);
   event SetWorkerAddress(uint256 indexed keeperId, address indexed worker);
-  event Stake(uint256 indexed keeperId, uint256 amount, address staker, address receiver);
+  event Stake(uint256 indexed keeperId, uint256 amount, address staker);
   event InitiateRedeem(uint256 indexed keeperId, uint256 redeemAmount, uint256 stakeAmount, uint256 slashedStakeAmount);
   event FinalizeRedeem(uint256 indexed keeperId, address indexed beneficiary, uint256 amount);
   event WithdrawCompensation(uint256 indexed keeperId, address indexed to, uint256 amount);
@@ -242,10 +240,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     }
   }
 
-  constructor(address owner_, address cvp_, uint256 minKeeperCvp_, uint256 pendingWithdrawalTimeoutSeconds_)
-    ERC20("PPAgentV2 Staked CVP", "paCVP")
-    ERC20Permit("PPAgentV2 Staked CVP")
-  {
+  constructor(address owner_, address cvp_, uint256 minKeeperCvp_, uint256 pendingWithdrawalTimeoutSeconds_) {
     minKeeperCvp = minKeeperCvp_;
     CVP = IERC20(cvp_);
     pendingWithdrawalTimeoutSeconds = pendingWithdrawalTimeoutSeconds_;
@@ -928,7 +923,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     keepers[keeperId] = Keeper(worker_, 0);
     emit RegisterAsKeeper(keeperId, msg.sender, worker_);
 
-    _stake(keeperId, msg.sender, initialDepositAmount_);
+    _stake(keeperId, initialDepositAmount_);
   }
 
   /**
@@ -978,20 +973,18 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    *   Accounts the staking amount on the beneficiary's stakeOf balance.
    *
    * @param keeperId_ The keeper ID
-   * @param for_ The address receives derivative ERC20 tokens in exchange
    * @param amount_ The amount to stake
    */
-  function stake(uint256 keeperId_, address for_, uint256 amount_) external {
+  function stake(uint256 keeperId_, uint256 amount_) external {
     _assertNonZeroAmount(amount_);
-    _stake(keeperId_, for_, amount_);
+    _stake(keeperId_, amount_);
   }
 
-  function _stake(uint256 keeperId_, address for_, uint256 amount_) internal {
+  function _stake(uint256 keeperId_, uint256 amount_) internal {
     CVP.transferFrom(msg.sender, address(this), amount_);
-    _mint(for_, amount_);
     keepers[keeperId_].cvpStake += uint96(amount_);
 
-    emit Stake(keeperId_, amount_, msg.sender, for_);
+    emit Stake(keeperId_, amount_, msg.sender);
   }
 
   /**
@@ -1025,7 +1018,6 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
       revert AmountGtStake(amount_, stakeOfBefore, slashedStakeOfBefore);
     }
 
-    _burn(msg.sender, amount_);
     slashedStakeOf[keeperId_] = 0;
     uint256 stakeOfToReduceAmount;
     unchecked {

@@ -9,7 +9,7 @@ contract KeeperTest is TestHelper {
   uint256 internal kid;
 
   event RegisterAsKeeper(uint256 indexed keeperId, address indexed keeperAdmin, address indexed keeperWorker);
-  event Stake(uint256 indexed keeperId, uint256 amount, address staker, address receiver);
+  event Stake(uint256 indexed keeperId, uint256 amount, address staker);
   event WithdrawCompensation(uint256 indexed keeperId, address indexed to, uint256 amount);
 
   function setUp() public override {
@@ -22,7 +22,7 @@ contract KeeperTest is TestHelper {
     vm.stopPrank();
 
     vm.deal(address(agent), 20 ether);
-    bytes32 rewardSlotKey = keccak256(abi.encode(kid, 23 /* compensations slot */));
+    bytes32 rewardSlotKey = keccak256(abi.encode(kid, 16 /* compensations slot */));
     vm.store(address(agent), rewardSlotKey, bytes32(uint256(20 ether)));
   }
 
@@ -40,7 +40,7 @@ contract KeeperTest is TestHelper {
     vm.expectEmit(true, true, false, true, address(agent));
     emit RegisterAsKeeper(1, keeperAdmin, keeperWorker);
     vm.expectEmit(true, true, false, true, address(agent));
-    emit Stake(1, MIN_DEPOSIT_3000_CVP, keeperAdmin, keeperAdmin);
+    emit Stake(1, MIN_DEPOSIT_3000_CVP, keeperAdmin);
 
     vm.prank(keeperAdmin);
     kid = agent.registerAsKeeper(keeperWorker, MIN_DEPOSIT_3000_CVP);
