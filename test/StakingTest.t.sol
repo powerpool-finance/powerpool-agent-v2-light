@@ -16,7 +16,7 @@ contract StakingTest is TestHelper {
 
     vm.startPrank(keeperAdmin);
     cvp.approve(address(agent), MIN_DEPOSIT_3000_CVP * 2);
-    kid0 = agent.registerAsKeeper(keeperWorker, MIN_DEPOSIT_3000_CVP);
+    kid0 = agent.registerAsKeeper(address(1), MIN_DEPOSIT_3000_CVP);
     kid1 = agent.registerAsKeeper(keeperWorker, MIN_DEPOSIT_3000_CVP);
     vm.stopPrank();
   }

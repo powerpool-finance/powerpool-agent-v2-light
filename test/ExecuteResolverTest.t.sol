@@ -32,7 +32,7 @@ contract ExecuteResolverTest is TestHelper {
       vm.prank(keeperAdmin);
       cvp.approve(address(agent), 10_000 ether);
       vm.prank(keeperAdmin);
-      agent.registerAsKeeper(keeperWorker, 5_000 ether);
+      agent.registerAsKeeper(address(1), 5_000 ether);
       vm.prank(keeperAdmin);
       kid = agent.registerAsKeeper(keeperWorker, 5_000 ether);
     }

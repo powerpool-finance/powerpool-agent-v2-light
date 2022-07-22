@@ -11,6 +11,7 @@ contract KeeperTest is TestHelper {
   event RegisterAsKeeper(uint256 indexed keeperId, address indexed keeperAdmin, address indexed keeperWorker);
   event Stake(uint256 indexed keeperId, uint256 amount, address staker);
   event WithdrawCompensation(uint256 indexed keeperId, address indexed to, uint256 amount);
+  event SetWorkerAddress(uint256 indexed keeperId, address indexed prev, address indexed worker);
 
   function setUp() public override {
     cvp = new MockCVP();
@@ -35,25 +36,39 @@ contract KeeperTest is TestHelper {
     vm.prank(keeperAdmin);
     cvp.approve(address(agent), MIN_DEPOSIT_3000_CVP * 2);
 
-    assertEq(kid, 0);
-
-    vm.expectEmit(true, true, false, true, address(agent));
-    emit RegisterAsKeeper(1, keeperAdmin, keeperWorker);
-    vm.expectEmit(true, true, false, true, address(agent));
-    emit Stake(1, MIN_DEPOSIT_3000_CVP, keeperAdmin);
-
-    vm.prank(keeperAdmin);
-    kid = agent.registerAsKeeper(keeperWorker, MIN_DEPOSIT_3000_CVP);
-
     assertEq(kid, 1);
 
-    assertEq(_stakeOf(1), MIN_DEPOSIT_3000_CVP);
-    assertEq(_workerOf(1), keeperWorker);
+    address keeperWorker2 = address(1);
+    vm.expectEmit(true, true, false, true, address(agent));
+    emit RegisterAsKeeper(2, keeperAdmin, keeperWorker2);
+    vm.expectEmit(true, true, false, true, address(agent));
+    emit Stake(2, MIN_DEPOSIT_3000_CVP, keeperAdmin);
 
     vm.prank(keeperAdmin);
-    kid = agent.registerAsKeeper(keeperWorker, MIN_DEPOSIT_3000_CVP);
+    kid = agent.registerAsKeeper(keeperWorker2, MIN_DEPOSIT_3000_CVP);
 
     assertEq(kid, 2);
+
+    assertEq(_stakeOf(2), MIN_DEPOSIT_3000_CVP);
+    assertEq(_workerOf(2), keeperWorker2);
+    assertEq(agent.workerKeeperIds(keeperWorker2), 2);
+
+    address keeperWorker3 = address(3);
+    vm.prank(keeperAdmin);
+    kid = agent.registerAsKeeper(keeperWorker3, MIN_DEPOSIT_3000_CVP);
+
+    assertEq(agent.workerKeeperIds(keeperWorker3), 3);
+    assertEq(kid, 3);
+  }
+
+  function testErrKeeperRegistrationWorkerAlreadyAssigned() public {
+    cvp.transfer(keeperAdmin, MIN_DEPOSIT_3000_CVP);
+
+    vm.prank(keeperAdmin);
+    cvp.approve(address(agent), MIN_DEPOSIT_3000_CVP);
+
+    vm.expectRevert(PPAgentV2.WorkerAlreadyAssigned.selector);
+    kid = agent.registerAsKeeper(keeperWorker, MIN_DEPOSIT_3000_CVP - 1);
   }
 
   function testErrKeeperRegistrationInsufficientDeposit() public {
@@ -63,7 +78,8 @@ contract KeeperTest is TestHelper {
     cvp.approve(address(agent), MIN_DEPOSIT_3000_CVP);
 
     vm.expectRevert(PPAgentV2.InsufficientAmount.selector);
-    kid = agent.registerAsKeeper(keeperWorker, MIN_DEPOSIT_3000_CVP - 1);
+    address keeperWorker2 = address(1);
+    kid = agent.registerAsKeeper(keeperWorker2, MIN_DEPOSIT_3000_CVP - 1);
   }
 
   function testKeeperFullCompensationWithdrawalToAnotherAddress() public {
@@ -134,5 +150,71 @@ contract KeeperTest is TestHelper {
 
     vm.prank(keeperAdmin);
     agent.withdrawCompensation(kid, alice, 0);
+  }
+
+  function testSetWorker() public {
+    cvp.transfer(keeperAdmin, MIN_DEPOSIT_3000_CVP);
+
+    address newWorker = address(1);
+
+    assertEq(agent.workerKeeperIds(keeperWorker), kid);
+    assertEq(agent.workerKeeperIds(newWorker), 0);
+    assertEq(_workerOf(kid), keeperWorker);
+
+    vm.expectEmit(true, true, false, true, address(agent));
+    emit SetWorkerAddress(kid, keeperWorker, newWorker);
+    vm.prank(keeperAdmin);
+    agent.setWorkerAddress(kid, newWorker);
+
+    assertEq(agent.workerKeeperIds(keeperWorker), 0);
+    assertEq(agent.workerKeeperIds(newWorker), kid);
+    assertEq(_workerOf(kid), newWorker);
+  }
+
+  function testUnsetWorker() public {
+    cvp.transfer(keeperAdmin, MIN_DEPOSIT_3000_CVP);
+
+    vm.prank(keeperAdmin);
+    cvp.approve(address(agent), MIN_DEPOSIT_3000_CVP);
+
+    address newWorker = address(0);
+
+    assertEq(agent.workerKeeperIds(keeperWorker), kid);
+    assertEq(agent.workerKeeperIds(newWorker), 0);
+    assertEq(_workerOf(kid), keeperWorker);
+
+    vm.prank(keeperAdmin);
+    agent.setWorkerAddress(kid, newWorker);
+
+    assertEq(agent.workerKeeperIds(keeperWorker), 0);
+    assertEq(agent.workerKeeperIds(newWorker), kid);
+    assertEq(_workerOf(kid), newWorker);
+  }
+
+  function testErrSetWorkerAlreadyTaken() public {
+    cvp.transfer(keeperAdmin, MIN_DEPOSIT_3000_CVP);
+
+    vm.startPrank(keeperAdmin);
+    cvp.approve(address(agent), MIN_DEPOSIT_3000_CVP);
+
+    address keeperWorker2 = address(2);
+    uint256 kid2 = agent.registerAsKeeper(keeperWorker2, MIN_DEPOSIT_3000_CVP);
+
+    vm.expectRevert(PPAgentV2.WorkerAlreadyAssigned.selector);
+    agent.setWorkerAddress(kid2, keeperWorker);
+    agent.setWorkerAddress(kid, address(0));
+    agent.setWorkerAddress(kid2, keeperWorker);
+
+    vm.stopPrank();
+  }
+
+  function testErrSetWorkerNotAdmin() public {
+    cvp.transfer(keeperAdmin, MIN_DEPOSIT_3000_CVP);
+
+    vm.prank(keeperAdmin);
+    cvp.approve(address(agent), MIN_DEPOSIT_3000_CVP);
+
+    vm.expectRevert(PPAgentV2.OnlyKeeperAdmin.selector);
+    agent.setWorkerAddress(kid, address(1));
   }
 }

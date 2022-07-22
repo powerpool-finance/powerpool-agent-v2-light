@@ -58,6 +58,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable {
   error FeeTooBig();
   error InsufficientAmount();
   error OnlyPendingOwner();
+  error WorkerAlreadyAssigned();
 
   string public constant VERSION = "2.0";
   uint256 internal constant MAX_PENDING_WITHDRAWAL_TIMEOUT_SECONDS = 30 days;
@@ -86,7 +87,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable {
   event WithdrawFees(address indexed to, uint256 amount);
   event Slash(uint256 indexed keeperId, address indexed to, uint256 currentAmount, uint256 pendingAmount);
   event RegisterAsKeeper(uint256 indexed keeperId, address indexed keeperAdmin, address indexed keeperWorker);
-  event SetWorkerAddress(uint256 indexed keeperId, address indexed worker);
+  event SetWorkerAddress(uint256 indexed keeperId, address indexed prev, address indexed worker);
   event Stake(uint256 indexed keeperId, uint256 amount, address staker);
   event InitiateRedeem(uint256 indexed keeperId, uint256 redeemAmount, uint256 stakeAmount, uint256 slashedStakeAmount);
   event FinalizeRedeem(uint256 indexed keeperId, address indexed beneficiary, uint256 amount);
@@ -185,6 +186,9 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable {
   // owner => credits
   mapping(address => uint256) public jobOwnerCredits;
 
+  // worker => keeperIs
+  mapping(address => uint256) public workerKeeperIds;
+
   /*** PSEUDO-MODIFIERS ***/
 
   function _assertOnlyOwner() internal view {
@@ -202,6 +206,12 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable {
   function _assertOnlyKeeperAdmin(uint256 keeperId_) internal view {
     if (msg.sender != keeperAdmins[keeperId_]) {
       revert OnlyKeeperAdmin();
+    }
+  }
+
+  function _assertWorkerNotAssigned(address worker_) internal view {
+    if (workerKeeperIds[worker_] != 0) {
+      revert WorkerAlreadyAssigned();
     }
   }
 
@@ -914,13 +924,16 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable {
    * @return keeperId The registered keeper ID
    */
   function registerAsKeeper(address worker_, uint256 initialDepositAmount_) external returns (uint256 keeperId) {
+    _assertWorkerNotAssigned(worker_);
+
     if (initialDepositAmount_ < minKeeperCvp) {
       revert InsufficientAmount();
     }
 
-    keeperId = nextKeeperId++;
+    keeperId = ++nextKeeperId;
     keeperAdmins[keeperId] = msg.sender;
     keepers[keeperId] = Keeper(worker_, 0);
+    workerKeeperIds[worker_] = keeperId;
     emit RegisterAsKeeper(keeperId, msg.sender, worker_);
 
     _stake(keeperId, initialDepositAmount_);
@@ -934,9 +947,14 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable {
    */
   function setWorkerAddress(uint256 keeperId_, address worker_) external {
     _assertOnlyKeeperAdmin(keeperId_);
+    _assertWorkerNotAssigned(worker_);
 
+    address prev = keepers[keeperId_].worker;
+    delete workerKeeperIds[prev];
+    workerKeeperIds[worker_] = keeperId_;
     keepers[keeperId_].worker = worker_;
-    emit SetWorkerAddress(keeperId_, worker_);
+
+    emit SetWorkerAddress(keeperId_, prev, worker_);
   }
 
   /**
