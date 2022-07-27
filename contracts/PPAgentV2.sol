@@ -105,14 +105,9 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable {
   event RegisterJob(
     bytes32 indexed jobKey,
     address indexed jobAddress,
-    bytes4 indexed jobSelector,
-    bool useJobOwnerCredits,
+    uint256 indexed jobId,
     address owner,
-    uint256 jobMinCvp,
-    uint256 maxBaseFeeGwei,
-    uint256 rewardPct,
-    uint256 fixedReward,
-    uint256 calldataSource
+    RegisterJobParams params
   );
   event JobUpdate(
     bytes32 indexed jobKey,
@@ -572,14 +567,9 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable {
     emit RegisterJob(
       jobKey,
       params_.jobAddress,
-      params_.jobSelector,
-      params_.useJobOwnerCredits,
+      jobId,
       msg.sender,
-      params_.jobMinCvp,
-      params_.maxBaseFeeGwei,
-      params_.rewardPct,
-      params_.fixedReward,
-      params_.calldataSource
+      params_
     );
 
     if (CalldataSourceType(params_.calldataSource) == CalldataSourceType.PRE_DEFINED) {

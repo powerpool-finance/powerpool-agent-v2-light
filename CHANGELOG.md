@@ -5,6 +5,7 @@
 - Remove ERC20 functionality
 - Add `keeperWorker => keeperId` mapping. Now a keeperWorker can be assigned to only one keeper.
 - Bump Solidity compiler to v0.8.15
+- Add RegisterJob event jobID argument
 
 ### 2.0.0
 
