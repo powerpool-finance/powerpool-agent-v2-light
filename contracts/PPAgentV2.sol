@@ -161,8 +161,8 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable {
   // keccak256(jobAddress, id) => pendingAddress
   mapping(bytes32 => address) internal jobPendingTransfers;
 
-  // jobAddress => nextIdToRegister(actually uint24)
-  mapping(address => uint256) public jobNextIds;
+  // jobAddress => lastIdRegistered(actually uint24)
+  mapping(address => uint256) public jobLastIds;
 
   // keeperId => (worker,CVP stake)
   mapping(uint256 => Keeper) internal keepers;
@@ -538,7 +538,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable {
     Resolver calldata resolver_,
     bytes calldata preDefinedCalldata_
   ) external payable returns (bytes32 jobKey, uint256 jobId){
-    jobId = jobNextIds[params_.jobAddress];
+    jobId = jobLastIds[params_.jobAddress] + 1;
 
     if (jobId > type(uint24).max) {
       revert JobIdOverflow();
@@ -611,7 +611,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable {
       jobMinKeeperCvp[jobKey] = params_.jobMinCvp;
     }
 
-    jobNextIds[params_.jobAddress] += 1;
+    jobLastIds[params_.jobAddress] = jobId;
     jobOwners[jobKey] = msg.sender;
 
     if (msg.value > 0) {

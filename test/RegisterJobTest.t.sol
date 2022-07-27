@@ -84,23 +84,15 @@ contract RegisterJob is TestHelper {
   }
 
   function testShouldIncrementIdForAddress() public {
-    assertEq(agent.jobNextIds(job1), 0);
+    assertEq(agent.jobLastIds(job1), 0);
 
     (, uint256 jobId) = agent.registerJob({
       params_: params1,
       resolver_: emptyResolver,
       preDefinedCalldata_: new bytes(0)
     });
-    assertEq(jobId, 0);
-    assertEq(agent.jobNextIds(job1), 1);
-
-    (,jobId) = agent.registerJob({
-      params_: params1,
-      resolver_: emptyResolver,
-      preDefinedCalldata_: new bytes(0)
-    });
     assertEq(jobId, 1);
-    assertEq(agent.jobNextIds(job1), 2);
+    assertEq(agent.jobLastIds(job1), 1);
 
     (,jobId) = agent.registerJob({
       params_: params1,
@@ -108,17 +100,25 @@ contract RegisterJob is TestHelper {
       preDefinedCalldata_: new bytes(0)
     });
     assertEq(jobId, 2);
-    assertEq(agent.jobNextIds(job1), 3);
+    assertEq(agent.jobLastIds(job1), 2);
+
+    (,jobId) = agent.registerJob({
+      params_: params1,
+      resolver_: emptyResolver,
+      preDefinedCalldata_: new bytes(0)
+    });
+    assertEq(jobId, 3);
+    assertEq(agent.jobLastIds(job1), 3);
 
     // Addrss #2
-    assertEq(agent.jobNextIds(job2), 0);
+    assertEq(agent.jobLastIds(job2), 0);
     (,jobId) = agent.registerJob({
       params_: params2,
       resolver_: emptyResolver,
       preDefinedCalldata_: new bytes(0)
     });
-    assertEq(jobId, 0);
-    assertEq(agent.jobNextIds(job2), 1);
+    assertEq(jobId, 1);
+    assertEq(agent.jobLastIds(job2), 1);
   }
 
   function testShouldGenerateCorrectJobKey() public {
@@ -127,7 +127,7 @@ contract RegisterJob is TestHelper {
       resolver_: emptyResolver,
       preDefinedCalldata_: new bytes(0)
     });
-    assertEq(jobId, 0);
+    assertEq(jobId, 1);
     assertEq(agent.getJobKey(job1, jobId), jobKey);
 
     (jobKey, jobId) = agent.registerJob({
@@ -135,7 +135,7 @@ contract RegisterJob is TestHelper {
       resolver_: emptyResolver,
       preDefinedCalldata_: new bytes(0)
     });
-    assertEq(jobId, 1);
+    assertEq(jobId, 2);
     assertEq(agent.getJobKey(job1, jobId), jobKey);
   }
 
