@@ -11,15 +11,61 @@ library ConfigFlags {
   }
 }
 
-interface IPPAgentV2 {
+interface IPPAgentV2Executor {
   function execute_44g58pv() external;
+}
+
+interface IPPAgentV2Viewer {
+  struct Job {
+    uint8 config;
+    bytes4 selector;
+    uint88 credits;
+    uint16 maxBaseFeeGwei;
+    uint16 rewardPct;
+    uint32 fixedReward;
+    uint8 calldataSource;
+
+    // For interval jobs
+    uint24 intervalSeconds;
+    uint32 lastExecutionAt;
+  }
+
+  struct Resolver {
+    address resolverAddress;
+    bytes resolverCalldata;
+  }
+
+  function getConfig() external view returns (
+    uint256 minKeeperCvp_,
+    uint256 pendingWithdrawalTimeoutSeconds_,
+    uint256 feeTotal_,
+    uint256 feePpm_
+  );
+  function getKeeper(uint256 keeperId_) external view returns (
+    address admin,
+    address worker,
+    uint256 currentStake,
+    uint256 slashedStake,
+    uint256 compensation,
+    uint256 pendingWithdrawalAmount,
+    uint256 pendingWithdrawalEndAt
+  );
+  function getJob(bytes32 jobKey_) external view returns (
+    address owner,
+    address pendingTransfer,
+    uint256 jobLevelMinKeeperCvp,
+    Job memory details,
+    bytes memory preDefinedCalldata,
+    Resolver memory resolver
+  );
+  function getJobRaw(bytes32 jobKey_) external view returns (uint256 rawJob);
 }
 
 /**
  * @title PowerAgentLite
  * @author PowerPool
  */
-contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable {
+contract PPAgentV2 is IPPAgentV2Executor, IPPAgentV2Viewer, PPAgentV2Flags, Ownable {
   error OnlyOwner();
   error NonEOASender();
   error InsufficientKeeperStake();
@@ -117,25 +163,6 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable {
     uint256 jobMinCvp,
     uint256 intervalSeconds
   );
-
-  struct Job {
-    uint8 config;
-    bytes4 selector;
-    uint88 credits;
-    uint16 maxBaseFeeGwei;
-    uint16 rewardPct;
-    uint32 fixedReward;
-    uint8 calldataSource;
-
-    // For interval jobs
-    uint24 intervalSeconds;
-    uint32 lastExecutionAt;
-  }
-
-  struct Resolver {
-    address resolverAddress;
-    bytes resolverCalldata;
-  }
 
   struct Keeper {
     address worker;
