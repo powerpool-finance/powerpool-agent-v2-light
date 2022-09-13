@@ -50,6 +50,10 @@ interface IPPAgentV2Viewer {
     uint256 pendingWithdrawalAmount,
     uint256 pendingWithdrawalEndAt
   );
+  function getKeeperWorkerAndStake(uint256 keeperId_) external view returns (
+    address worker,
+    uint256 currentStake
+  );
   function getJob(bytes32 jobKey_) external view returns (
     address owner,
     address pendingTransfer,
@@ -1187,6 +1191,20 @@ contract PPAgentV2 is IPPAgentV2Executor, IPPAgentV2Viewer, PPAgentV2Flags, Owna
       return (gasUsed_ + JOB_RUN_GAS_OVERHEAD) * blockBaseFee_ * rewardPct_ / 100
              + fixedReward_ * FIXED_PAYMENT_MULTIPLIER;
     }
+  }
+
+  function getKeeperWorkerAndStake(uint256 keeperId_)
+    external view returns (
+      address worker,
+      uint256 currentStake
+    )
+  {
+    Keeper memory keeper = keepers[keeperId_];
+
+    return (
+      keeper.worker,
+      keeper.cvpStake
+    );
   }
 
   function getConfig()

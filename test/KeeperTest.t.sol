@@ -160,6 +160,11 @@ contract KeeperTest is TestHelper {
     assertEq(agent.workerKeeperIds(keeperWorker), kid);
     assertEq(agent.workerKeeperIds(newWorker), 0);
     assertEq(_workerOf(kid), keeperWorker);
+    assertEq(_stakeOf(kid), 3000 ether);
+
+    (address worker, uint256 stake) = agent.getKeeperWorkerAndStake(kid);
+    assertEq(worker, keeperWorker);
+    assertEq(stake, 3000 ether);
 
     vm.expectEmit(true, true, false, true, address(agent));
     emit SetWorkerAddress(kid, keeperWorker, newWorker);
