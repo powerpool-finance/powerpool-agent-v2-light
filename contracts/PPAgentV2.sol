@@ -59,6 +59,7 @@ interface IPPAgentV2Viewer {
     Resolver memory resolver
   );
   function getJobRaw(bytes32 jobKey_) external view returns (uint256 rawJob);
+  function jobOwnerCredits(address owner_) external view returns (uint256 credits);
 }
 
 /**
