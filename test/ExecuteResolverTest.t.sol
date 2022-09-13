@@ -39,7 +39,7 @@ contract ExecuteResolverTest is TestHelper {
   }
 
   function _setupJob(address job_, bytes4 selector_, bool assertSelector_) internal {
-    PPAgentV2.Resolver memory resolver = PPAgentV2.Resolver({
+    PPAgentV2.Resolver memory resolver = IPPAgentV2Viewer.Resolver({
       resolverAddress: job_,
       resolverCalldata: abi.encode("myPass")
     });

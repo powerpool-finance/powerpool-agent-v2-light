@@ -73,11 +73,11 @@ contract RegisterJob is TestHelper {
       calldataSource: CALLDATA_SOURCE_RESOLVER,
       intervalSeconds: 0
     });
-    emptyResolver = PPAgentV2.Resolver({
+    emptyResolver = IPPAgentV2Viewer.Resolver({
       resolverAddress: address(0),
       resolverCalldata: new bytes(0)
     });
-    resolver1 = PPAgentV2.Resolver({
+    resolver1 = IPPAgentV2Viewer.Resolver({
       resolverAddress: job1,
       resolverCalldata: hex"313373"
     });

@@ -31,7 +31,7 @@ contract ExecuteSelectorTest is TestHelper {
     agent = new PPAgentV2(owner, address(cvp), 3_000 ether, 3 days);
     counter = new OnlySelectorTestJob(address(agent));
 
-    PPAgentV2.Resolver memory resolver = PPAgentV2.Resolver({
+    PPAgentV2.Resolver memory resolver = IPPAgentV2Viewer.Resolver({
       resolverAddress: address(counter),
       resolverCalldata: new bytes(0)
     });
