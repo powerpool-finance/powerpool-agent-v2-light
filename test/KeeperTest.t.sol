@@ -103,6 +103,20 @@ contract KeeperTest is TestHelper {
     assertEq(alice.balance, 20 ether);
   }
 
+  function testKeeperWorkerFullCompensationWithdrawalToAnotherAddress() public {
+    assertEq(alice.balance, 0);
+    assertEq(_compensationOf(kid), 20 ether);
+
+    vm.expectEmit(true, true, false, true, address(agent));
+    emit WithdrawCompensation(kid, alice, 20 ether);
+
+    vm.prank(keeperWorker);
+    agent.withdrawCompensation(kid, alice, 20 ether);
+
+    assertEq(_compensationOf(kid), 0);
+    assertEq(alice.balance, 20 ether);
+  }
+
   function testKeeperCurrentCompensationWithdrawalToAnotherAddress() public {
     assertEq(alice.balance, 0);
     assertEq(_compensationOf(kid), 20 ether);

@@ -106,6 +106,7 @@ contract PPAgentV2 is IPPAgentV2Executor, IPPAgentV2Viewer, PPAgentV2Flags, Owna
   error MissingResolverAddress();
   error NotSupportedByJobCalldataSource();
   error OnlyKeeperAdmin();
+  error OnlyKeeperAdminOrWorker();
   error TimeoutTooBig();
   error FeeTooBig();
   error InsufficientAmount();
@@ -234,6 +235,12 @@ contract PPAgentV2 is IPPAgentV2Executor, IPPAgentV2Viewer, PPAgentV2Flags, Owna
   function _assertOnlyKeeperAdmin(uint256 keeperId_) internal view {
     if (msg.sender != keeperAdmins[keeperId_]) {
       revert OnlyKeeperAdmin();
+    }
+  }
+
+  function _assertOnlyKeeperAdminOrWorker(uint256 keeperId_) internal view {
+    if (msg.sender != keeperAdmins[keeperId_] && msg.sender != keepers[keeperId_].worker) {
+      revert OnlyKeeperAdminOrWorker();
     }
   }
 
@@ -994,7 +1001,7 @@ contract PPAgentV2 is IPPAgentV2Executor, IPPAgentV2Viewer, PPAgentV2Flags, Owna
     }
 
     _assertNonZeroAmount(amount_);
-    _assertOnlyKeeperAdmin(keeperId_);
+    _assertOnlyKeeperAdminOrWorker(keeperId_);
 
     if (amount_ > available) {
       revert WithdrawAmountExceedsAvailable(amount_, available);
