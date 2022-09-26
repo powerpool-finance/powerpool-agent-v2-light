@@ -32,7 +32,7 @@ contract AgentOwnerTest is TestHelper {
       uint256 minKeeperCvp,
       uint256 pendingWithdrawalTimeoutSeconds,
       ,
-      uint256 feePpm
+      uint256 feePpm,
     ) = agent.getConfig();
 
     assertEq(minKeeperCvp, type(uint256).max);
@@ -48,7 +48,7 @@ contract AgentOwnerTest is TestHelper {
   function testSetPendingWithdrawalTimeoutZero() public {
     vm.prank(owner);
     agent.setAgentParams(2, 0, 2);
-    (,uint256 pendingWithdrawalTimeoutSeconds,,) = agent.getConfig();
+    (,uint256 pendingWithdrawalTimeoutSeconds,,,) = agent.getConfig();
     assertEq(pendingWithdrawalTimeoutSeconds, 0);
   }
 
@@ -71,7 +71,7 @@ contract AgentOwnerTest is TestHelper {
     vm.store(address(agent), bytes32(uint256(3))/* feeTotal slot */, bytes32(uint256(20 ether)));
 
     assertEq(address(agent).balance, 30 ether);
-    (,,uint256 feeTotal,) = agent.getConfig();
+    (,,uint256 feeTotal,,) = agent.getConfig();
     assertEq(feeTotal, 20 ether);
     assertEq(bob.balance, 0);
 
@@ -81,7 +81,7 @@ contract AgentOwnerTest is TestHelper {
     agent.withdrawFees(bob);
 
     assertEq(address(agent).balance, 10 ether);
-    (,,feeTotal,) = agent.getConfig();
+    (,,feeTotal,,) = agent.getConfig();
     assertEq(feeTotal, 0);
     assertEq(bob.balance, 20 ether);
   }

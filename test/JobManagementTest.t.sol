@@ -132,7 +132,7 @@ contract JobManagementTest is TestHelper {
     agent.depositJobCredits{value: 10 ether}(jobKey);
 
     assertEq(_jobDetails(jobKey).credits, 9.6 ether);
-    (,,uint256 feeTotal,) = agent.getConfig();
+    (,,uint256 feeTotal,,) = agent.getConfig();
     assertEq(feeTotal, 0.4 ether);
 
     vm.expectEmit(true, true, false, true, address(agent));
@@ -141,7 +141,7 @@ contract JobManagementTest is TestHelper {
     agent.depositJobCredits{value: 20 ether}(jobKey);
 
     assertEq(_jobDetails(jobKey).credits, 28.8 ether);
-    (,,feeTotal,) = agent.getConfig();
+    (,,feeTotal,,) = agent.getConfig();
     assertEq(feeTotal, 1.2 ether);
   }
 

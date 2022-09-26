@@ -455,7 +455,7 @@ contract RegisterJob is TestHelper {
     });
 
     assertEq(_jobDetails(jobKey).credits, 9.6 ether);
-    (,,uint256 feeTotal,) = agent.getConfig();
+    (,,uint256 feeTotal,,) = agent.getConfig();
     assertEq(feeTotal, 0.4 ether);
   }
 
@@ -493,7 +493,7 @@ contract RegisterJob is TestHelper {
 
     assertEq(_jobDetails(jobKey).credits, 0);
     assertEq(agent.jobOwnerCredits(bob), 9.6 ether);
-    (,,uint256 feeTotal,) = agent.getConfig();
+    (,,uint256 feeTotal,,) = agent.getConfig();
     assertEq(feeTotal, 0.4 ether);
   }
 

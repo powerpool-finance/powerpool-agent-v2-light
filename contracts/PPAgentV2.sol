@@ -39,7 +39,8 @@ interface IPPAgentV2Viewer {
     uint256 minKeeperCvp_,
     uint256 pendingWithdrawalTimeoutSeconds_,
     uint256 feeTotal_,
-    uint256 feePpm_
+    uint256 feePpm_,
+    uint256 lastKeeperId_
   );
   function getKeeper(uint256 keeperId_) external view returns (
     address admin,
@@ -178,7 +179,7 @@ contract PPAgentV2 is IPPAgentV2Executor, IPPAgentV2Viewer, PPAgentV2Flags, Owna
   uint256 internal pendingWithdrawalTimeoutSeconds;
   uint256 internal feeTotal;
   uint256 internal feePpm;
-  uint256 internal nextKeeperId;
+  uint256 internal lastKeeperId;
 
   // keccak256(jobAddress, id) => ethBalance
   mapping(bytes32 => Job) internal jobs;
@@ -952,7 +953,7 @@ contract PPAgentV2 is IPPAgentV2Executor, IPPAgentV2Viewer, PPAgentV2Flags, Owna
       revert InsufficientAmount();
     }
 
-    keeperId = ++nextKeeperId;
+    keeperId = ++lastKeeperId;
     keeperAdmins[keeperId] = msg.sender;
     keepers[keeperId] = Keeper(worker_, 0);
     workerKeeperIds[worker_] = keeperId;
@@ -1212,14 +1213,16 @@ contract PPAgentV2 is IPPAgentV2Executor, IPPAgentV2Viewer, PPAgentV2Flags, Owna
       uint256 minKeeperCvp_,
       uint256 pendingWithdrawalTimeoutSeconds_,
       uint256 feeTotal_,
-      uint256 feePpm_
+      uint256 feePpm_,
+      uint256 lastKeeperId_
     )
   {
     return (
       minKeeperCvp,
       pendingWithdrawalTimeoutSeconds,
       feeTotal,
-      feePpm
+      feePpm,
+      lastKeeperId
     );
   }
 

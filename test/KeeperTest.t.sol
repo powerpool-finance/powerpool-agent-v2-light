@@ -37,6 +37,8 @@ contract KeeperTest is TestHelper {
     cvp.approve(address(agent), MIN_DEPOSIT_3000_CVP * 2);
 
     assertEq(kid, 1);
+    (,,,,uint256 lastKeeperId) = agent.getConfig();
+    assertEq(lastKeeperId, 1);
 
     address keeperWorker2 = address(1);
     vm.expectEmit(true, true, false, true, address(agent));
@@ -48,6 +50,8 @@ contract KeeperTest is TestHelper {
     kid = agent.registerAsKeeper(keeperWorker2, MIN_DEPOSIT_3000_CVP);
 
     assertEq(kid, 2);
+    (,,,,lastKeeperId) = agent.getConfig();
+    assertEq(lastKeeperId, 2);
 
     assertEq(_stakeOf(2), MIN_DEPOSIT_3000_CVP);
     assertEq(_workerOf(2), keeperWorker2);
@@ -59,6 +63,9 @@ contract KeeperTest is TestHelper {
 
     assertEq(agent.workerKeeperIds(keeperWorker3), 3);
     assertEq(kid, 3);
+
+    (,,,,lastKeeperId) = agent.getConfig();
+    assertEq(lastKeeperId, 3);
   }
 
   function testErrKeeperRegistrationWorkerAlreadyAssigned() public {
