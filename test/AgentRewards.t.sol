@@ -167,7 +167,7 @@ contract AgentRewardsTest is TestHelper {
     assertEq(agentRewards.lastClaimedAt(kid1), 0);
 
     uint256 bobBalanceBefore = cvp.balanceOf(bob);
-    vm.prank(keeperWorker);
+    vm.prank(keeperWorker, keeperWorker);
     vm.expectEmit(true, true, false, true, address(agentRewards));
     emit Claim(kid1, bob, 10 ether);
     agentRewards.claim(kid1, bob);
@@ -199,12 +199,18 @@ contract AgentRewardsTest is TestHelper {
 
   function testErrClaimNotWorker() public {
     vm.expectRevert(bytes("Only keeper worker allowed"));
-    vm.prank(keeperAdmin);
+    vm.prank(keeperAdmin, keeperAdmin);
     agentRewards.claim(kid1, bob);
   }
 
   function testErrClaimNotWhitelisted() public {
     vm.expectRevert(bytes("Keeper should be whitelisted"));
+    vm.prank(keeperWorker, keeperWorker);
+    agentRewards.claim(kid1, bob);
+  }
+
+  function testErrClaimNotEOA() public {
+    vm.expectRevert(bytes("EOA only"));
     vm.prank(keeperWorker);
     agentRewards.claim(kid1, bob);
   }
