@@ -6,6 +6,7 @@ import "./jobs/OnlySelectorTestJob.sol";
 import "./mocks/MockCVP.sol";
 import "./TestHelper.sol";
 import "forge-std/Vm.sol";
+import "./jobs/JobTopupTestJob.sol";
 
 contract ExecuteSelectorTest is TestHelper {
   event Execute(bytes32 indexed jobKey, address indexed job, bool indexed success, uint256 gasUsed, uint256 baseFee, uint256 gasPrice, uint256 compensation);
@@ -317,6 +318,59 @@ contract ExecuteSelectorTest is TestHelper {
 
     assertEq(compensationsChange, 0);
     assertEq(jobOwnerCreditsChange, 0);
+  }
+
+  function testSelfTopup() public {
+    JobTopupTestJob topupJob = new JobTopupTestJob(address(agent));
+    payable(topupJob).transfer(8.42 ether);
+
+    PPAgentV2.Resolver memory resolver = IPPAgentV2Viewer.Resolver({
+      resolverAddress: address(topupJob),
+      resolverCalldata: new bytes(0)
+    });
+    PPAgentV2.RegisterJobParams memory params = PPAgentV2.RegisterJobParams({
+      jobAddress: address(topupJob),
+      jobSelector: JobTopupTestJob.execute.selector,
+      maxBaseFeeGwei: 100,
+      rewardPct: 35,
+      fixedReward: 10,
+      useJobOwnerCredits: false,
+      assertResolverSelector: false,
+      jobMinCvp: 0,
+
+      // For interval jobs
+      calldataSource: CALLDATA_SOURCE_RESOLVER,
+      intervalSeconds: 10
+    });
+    vm.prank(alice);
+    vm.deal(alice, 10 ether);
+    (bytes32 topupJobKey,uint256 topupJobId) = agent.registerJob{ value: 1 ether }({
+      params_: params,
+      resolver_: resolver,
+      preDefinedCalldata_: new bytes(0)
+    });
+
+    uint256 keeperBalanceBefore = keeperWorker.balance;
+    uint256 jobCreditsBefore = _jobDetails(topupJobKey).credits;
+
+    (bool ok, bytes memory cdata) = topupJob.myResolver(topupJobKey);
+    assertEq(ok, true);
+    vm.prank(keeperWorker, keeperWorker);
+    _callExecuteHelper(
+      agent,
+      address(topupJob),
+      topupJobId,
+      defaultFlags,
+      kid,
+      cdata
+    );
+
+    uint256 keeperBalanceChange = keeperWorker.balance - keeperBalanceBefore;
+
+    assertEq(address(topupJob).balance, 0);
+    assertGt(_jobDetails(topupJobKey).credits, jobCreditsBefore);
+    assertApproxEqAbs(0.010481075 ether, keeperBalanceChange, 0.0001 ether);
+    assertApproxEqAbs(_jobDetails(topupJobKey).credits, jobCreditsBefore + 8.42 ether - 0.010481075 ether, 0.0001 ether);
   }
 
   function testExecAccrueRewardByJobCredits() public {
