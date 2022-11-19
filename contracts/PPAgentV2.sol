@@ -113,7 +113,9 @@ contract PPAgentV2 is IPPAgentV2Executor, IPPAgentV2Viewer, PPAgentV2Flags, Owna
   error OnlyPendingOwner();
   error WorkerAlreadyAssigned();
 
+
   string public constant VERSION = "2.2.0";
+
   uint256 internal constant MAX_PENDING_WITHDRAWAL_TIMEOUT_SECONDS = 30 days;
   uint256 internal constant MAX_FEE_PPM = 5e4;
   uint256 internal constant FIXED_PAYMENT_MULTIPLIER = 1e15;
