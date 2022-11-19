@@ -35,7 +35,7 @@ contract ExecutePDCalldataTest is TestHelper {
   }
 
   function _setupJob(address job_, bytes memory preDefinedCalldata_) internal {
-    PPAgentV2.Resolver memory resolver = PPAgentV2.Resolver({
+    PPAgentV2.Resolver memory resolver = IPPAgentV2Viewer.Resolver({
       resolverAddress: address(0),
       resolverCalldata: new bytes(0)
     });

@@ -102,7 +102,7 @@ contract TestHelper is Test, PPAgentV2Flags {
   }
 
   function _callExecuteHelper(
-    IPPAgentV2 agent_,
+    IPPAgentV2Viewer agent_,
     address jobAddress_,
     uint256 jobId_,
     uint256 cfg_,
@@ -130,7 +130,7 @@ contract TestHelper is Test, PPAgentV2Flags {
   }
 
   function _callExecuteHelperWithGas(
-    IPPAgentV2 agent_,
+    IPPAgentV2Viewer agent_,
     address jobAddress_,
     uint256 jobId_,
     uint256 cfg_,

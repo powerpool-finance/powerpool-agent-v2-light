@@ -2,7 +2,7 @@
 src = 'contracts'
 out = 'out'
 libs = ['lib']
-solc_version = '0.8.14'
+solc_version = '0.8.17'
 via_ir = false
 
 # Enables or disables the optimizer

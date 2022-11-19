@@ -69,7 +69,7 @@ contract JobOwnerTest is TestHelper {
     assertEq(alice.balance, aliceBalanceBefore - deposit1);
 
     assertEq(agent.jobOwnerCredits(bob), amount1);
-    (,,uint256 feeTotal,) = agent.getConfig();
+    (,,uint256 feeTotal,,) = agent.getConfig();
     assertEq(feeTotal, fee1);
 
     // 2nd deposit
@@ -83,7 +83,7 @@ contract JobOwnerTest is TestHelper {
     assertEq(agent.jobOwnerCredits(bob), uint256(amount1) + uint256(amount2));
     assertEq(alice.balance, aliceBalanceBefore - deposit1);
     assertEq(bob.balance, bobBalanceBefore - deposit2);
-    (,,feeTotal,) = agent.getConfig();
+    (,,feeTotal,,) = agent.getConfig();
     assertEq(feeTotal, fee1 + fee2);
   }
 

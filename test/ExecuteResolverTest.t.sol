@@ -32,14 +32,14 @@ contract ExecuteResolverTest is TestHelper {
       vm.prank(keeperAdmin);
       cvp.approve(address(agent), 10_000 ether);
       vm.prank(keeperAdmin);
-      agent.registerAsKeeper(keeperWorker, 5_000 ether);
+      agent.registerAsKeeper(address(1), 5_000 ether);
       vm.prank(keeperAdmin);
       kid = agent.registerAsKeeper(keeperWorker, 5_000 ether);
     }
   }
 
   function _setupJob(address job_, bytes4 selector_, bool assertSelector_) internal {
-    PPAgentV2.Resolver memory resolver = PPAgentV2.Resolver({
+    PPAgentV2.Resolver memory resolver = IPPAgentV2Viewer.Resolver({
       resolverAddress: job_,
       resolverCalldata: abi.encode("myPass")
     });

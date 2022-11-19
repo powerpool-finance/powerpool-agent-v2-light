@@ -31,7 +31,7 @@ contract ExecuteSelectorTest is TestHelper {
     agent = new PPAgentV2(owner, address(cvp), 3_000 ether, 3 days);
     counter = new OnlySelectorTestJob(address(agent));
 
-    PPAgentV2.Resolver memory resolver = PPAgentV2.Resolver({
+    PPAgentV2.Resolver memory resolver = IPPAgentV2Viewer.Resolver({
       resolverAddress: address(counter),
       resolverCalldata: new bytes(0)
     });
@@ -88,7 +88,7 @@ contract ExecuteSelectorTest is TestHelper {
     vm.prank(owner);
     agent.setAgentParams(5_001 ether, 1, 1);
 
-    (uint256 minKeeperCvp,,,) = agent.getConfig();
+    (uint256 minKeeperCvp,,,,) = agent.getConfig();
     assertEq(minKeeperCvp, 5_001 ether);
     assertEq(_stakeOf(kid), 5_000 ether);
 
@@ -109,7 +109,7 @@ contract ExecuteSelectorTest is TestHelper {
     vm.prank(alice);
     agent.updateJob(jobKey, 200, 55, 20, 5001 ether, 60);
 
-    (uint256 minKeeperCvp,,,) = agent.getConfig();
+    (uint256 minKeeperCvp,,,,) = agent.getConfig();
     assertEq(minKeeperCvp, 3_000 ether);
     assertEq(_stakeOf(kid), 5_000 ether);
     assertEq(_jobMinKeeperCvp(jobKey), 5001 ether);

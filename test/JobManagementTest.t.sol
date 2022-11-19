@@ -67,7 +67,7 @@ contract JobManagementTest is TestHelper {
       calldataSource: CALLDATA_SOURCE_SELECTOR,
       intervalSeconds: 15
     });
-    resolver1 = PPAgentV2.Resolver({
+    resolver1 = IPPAgentV2Viewer.Resolver({
       resolverAddress: address(1),
       resolverCalldata: new bytes(0)
     });
@@ -132,7 +132,7 @@ contract JobManagementTest is TestHelper {
     agent.depositJobCredits{value: 10 ether}(jobKey);
 
     assertEq(_jobDetails(jobKey).credits, 9.6 ether);
-    (,,uint256 feeTotal,) = agent.getConfig();
+    (,,uint256 feeTotal,,) = agent.getConfig();
     assertEq(feeTotal, 0.4 ether);
 
     vm.expectEmit(true, true, false, true, address(agent));
@@ -141,7 +141,7 @@ contract JobManagementTest is TestHelper {
     agent.depositJobCredits{value: 20 ether}(jobKey);
 
     assertEq(_jobDetails(jobKey).credits, 28.8 ether);
-    (,,feeTotal,) = agent.getConfig();
+    (,,feeTotal,,) = agent.getConfig();
     assertEq(feeTotal, 1.2 ether);
   }
 
@@ -548,7 +548,7 @@ contract JobManagementTest is TestHelper {
     assertEq(current.resolverAddress, address(1));
     assertEq(current.resolverCalldata, new bytes(0));
 
-    PPAgentV2.Resolver memory newResolver = PPAgentV2.Resolver(address(2), hex"313373");
+    PPAgentV2.Resolver memory newResolver = IPPAgentV2Viewer.Resolver(address(2), hex"313373");
 
     vm.expectEmit(true, true, false, true, address(agent));
     emit SetJobResolver(jobKey, newResolver.resolverAddress, newResolver.resolverCalldata);
@@ -565,7 +565,7 @@ contract JobManagementTest is TestHelper {
       abi.encodeWithSelector(PPAgentV2.OnlyJobOwner.selector)
     );
 
-    PPAgentV2.Resolver memory newResolver = PPAgentV2.Resolver(address(2), hex"313373");
+    PPAgentV2.Resolver memory newResolver = IPPAgentV2Viewer.Resolver(address(2), hex"313373");
     agent.setJobResolver(jobKey, newResolver);
   }
 
@@ -574,7 +574,7 @@ contract JobManagementTest is TestHelper {
       abi.encodeWithSelector(PPAgentV2.NotSupportedByJobCalldataSource.selector)
     );
 
-    PPAgentV2.Resolver memory newResolver = PPAgentV2.Resolver(address(2), hex"313373");
+    PPAgentV2.Resolver memory newResolver = IPPAgentV2Viewer.Resolver(address(2), hex"313373");
     vm.prank(alice);
     agent.setJobResolver(jobKey, newResolver);
   }
@@ -584,7 +584,7 @@ contract JobManagementTest is TestHelper {
       abi.encodeWithSelector(PPAgentV2.MissingResolverAddress.selector)
     );
 
-    PPAgentV2.Resolver memory newResolver = PPAgentV2.Resolver(address(0), hex"313373");
+    PPAgentV2.Resolver memory newResolver = IPPAgentV2Viewer.Resolver(address(0), hex"313373");
     vm.prank(alice);
     agent.setJobResolver(jobKey, newResolver);
   }
