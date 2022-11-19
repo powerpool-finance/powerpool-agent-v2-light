@@ -1,5 +1,9 @@
 # PPAgentV2 Changelog
 
+### 2.2.0
+
+- Fix "execute + job update" reentrancy bug.
+
 ### 2.1.0
 
 - Remove ERC20 functionality.
