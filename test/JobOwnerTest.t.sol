@@ -9,9 +9,6 @@ contract JobOwnerTest is TestHelper {
   event DepositJobOwnerCredits(address indexed jobOwner, address indexed depositor, uint256 amount, uint256 fee);
   event WithdrawJobOwnerCredits(address indexed jobOwner, address indexed to, uint256 amount);
 
-  MockCVP internal cvp;
-  PPAgentV2 internal agent;
-
   function setUp() public override {
     vm.deal(alice, 100 ether);
     vm.deal(bob, 100 ether);
@@ -72,7 +69,8 @@ contract JobOwnerTest is TestHelper {
     assertEq(alice.balance, aliceBalanceBefore - deposit1);
 
     assertEq(agent.jobOwnerCredits(bob), amount1);
-    assertEq(agent.feeTotal(), fee1);
+    (,,uint256 feeTotal,) = agent.getConfig();
+    assertEq(feeTotal, fee1);
 
     // 2nd deposit
     uint256 fee2 = uint256(deposit2) * 4e4 / 1e6;
@@ -85,7 +83,8 @@ contract JobOwnerTest is TestHelper {
     assertEq(agent.jobOwnerCredits(bob), uint256(amount1) + uint256(amount2));
     assertEq(alice.balance, aliceBalanceBefore - deposit1);
     assertEq(bob.balance, bobBalanceBefore - deposit2);
-    assertEq(agent.feeTotal(), fee1 + fee2);
+    (,,feeTotal,) = agent.getConfig();
+    assertEq(feeTotal, fee1 + fee2);
   }
 
   function testErrAddJobOwnerCreditsZeroDeposit() public {
@@ -124,6 +123,22 @@ contract JobOwnerTest is TestHelper {
     assertEq(agent.jobOwnerCredits(alice), 0 ether);
     assertEq(alice.balance, aliceBalanceBefore + 7 ether);
     assertEq(bob.balance, bobBalanceBefore + 3 ether);
+  }
+
+  function testWithdrawCurrentJobOwnerCredits() public {
+    vm.prank(alice);
+    agent.depositJobOwnerCredits{ value: 10 ether}(alice);
+    assertEq(agent.jobOwnerCredits(alice), 10 ether);
+    uint256 bobBalanceBefore = bob.balance;
+
+    vm.expectEmit(true, true, false, true, address(agent));
+    emit WithdrawJobOwnerCredits(alice, bob, 10 ether);
+
+    vm.prank(alice);
+    agent.withdrawJobOwnerCredits(bob, type(uint256).max);
+
+    assertEq(agent.jobOwnerCredits(alice), 0 ether);
+    assertEq(bob.balance, bobBalanceBefore + 10 ether);
   }
 
   function testErrRemoveJobOwnerCreditsMissingAmount() public {

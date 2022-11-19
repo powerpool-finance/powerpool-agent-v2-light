@@ -6,12 +6,11 @@ import "./mocks/MockCVP.sol";
 import "./TestHelper.sol";
 
 contract KeeperTest is TestHelper {
-  MockCVP internal cvp;
-  PPAgentV2 internal agent;
   uint256 internal kid;
 
-  event RegisterAsKeeper(uint256 indexed keeperId, address indexed keeperAdmin, address keeperWorker);
+  event RegisterAsKeeper(uint256 indexed keeperId, address indexed keeperAdmin, address indexed keeperWorker);
   event Stake(uint256 indexed keeperId, uint256 amount, address staker, address receiver);
+  event WithdrawCompensation(uint256 indexed keeperId, address indexed to, uint256 amount);
 
   function setUp() public override {
     cvp = new MockCVP();
@@ -23,13 +22,13 @@ contract KeeperTest is TestHelper {
     vm.stopPrank();
 
     vm.deal(address(agent), 20 ether);
-    bytes32 rewardSlotKey = keccak256(abi.encode(kid, 22 /* compensations slot */));
+    bytes32 rewardSlotKey = keccak256(abi.encode(kid, 23 /* compensations slot */));
     vm.store(address(agent), rewardSlotKey, bytes32(uint256(20 ether)));
   }
 
   function testKeeperRegistration() public {
     assertEq(address(agent).balance, 20 ether);
-    assertEq(agent.compensations(kid), 20 ether);
+    assertEq(_compensationOf(kid), 20 ether);
 
     cvp.transfer(keeperAdmin, MIN_DEPOSIT_3000_CVP * 2);
 
@@ -48,9 +47,8 @@ contract KeeperTest is TestHelper {
 
     assertEq(kid, 1);
 
-    assertEq(agent.stakeOf(1), MIN_DEPOSIT_3000_CVP);
-    assertEq(agent.keeperInfo(1).cvpStake, MIN_DEPOSIT_3000_CVP);
-    assertEq(agent.keeperInfo(1).worker, keeperWorker);
+    assertEq(_stakeOf(1), MIN_DEPOSIT_3000_CVP);
+    assertEq(_workerOf(1), keeperWorker);
 
     vm.prank(keeperAdmin);
     kid = agent.registerAsKeeper(keeperWorker, MIN_DEPOSIT_3000_CVP);
@@ -70,8 +68,29 @@ contract KeeperTest is TestHelper {
 
   function testKeeperFullCompensationWithdrawalToAnotherAddress() public {
     assertEq(alice.balance, 0);
+    assertEq(_compensationOf(kid), 20 ether);
+
+    vm.expectEmit(true, true, false, true, address(agent));
+    emit WithdrawCompensation(kid, alice, 20 ether);
+
     vm.prank(keeperAdmin);
     agent.withdrawCompensation(kid, alice, 20 ether);
+
+    assertEq(_compensationOf(kid), 0);
+    assertEq(alice.balance, 20 ether);
+  }
+
+  function testKeeperCurrentCompensationWithdrawalToAnotherAddress() public {
+    assertEq(alice.balance, 0);
+    assertEq(_compensationOf(kid), 20 ether);
+
+    vm.expectEmit(true, true, false, true, address(agent));
+    emit WithdrawCompensation(kid, alice, 20 ether);
+
+    vm.prank(keeperAdmin);
+    agent.withdrawCompensation(kid, alice, type(uint256).max);
+
+    assertEq(_compensationOf(kid), 0);
     assertEq(alice.balance, 20 ether);
   }
 
@@ -80,12 +99,12 @@ contract KeeperTest is TestHelper {
     vm.prank(keeperAdmin);
     agent.withdrawCompensation(kid, alice, 15 ether);
     assertEq(alice.balance, 15 ether);
-    assertEq(agent.compensations(kid), 5 ether);
+    assertEq(_compensationOf(kid), 5 ether);
 
     vm.prank(keeperAdmin);
     agent.withdrawCompensation(kid, alice, 5 ether);
     assertEq(alice.balance, 20 ether);
-    assertEq(agent.compensations(kid), 0);
+    assertEq(_compensationOf(kid), 0);
   }
 
   function testErrWithdrawExtraCompensation() public {

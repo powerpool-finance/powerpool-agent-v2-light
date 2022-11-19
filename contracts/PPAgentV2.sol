@@ -52,22 +52,26 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   error MissingAmount();
   error WithdrawAmountExceedsAvailable(uint256 wanted, uint256 actual);
   error JobShouldHaveInterval();
+  error InvalidJobAddress();
   error MissingResolverAddress();
   error NotSupportedByJobCalldataSource();
   error OnlyKeeperAdmin();
   error TimeoutTooBig();
   error FeeTooBig();
   error InsufficientAmount();
+  error OnlyPendingOwner();
 
-  uint256 public constant VERSION = 2;
+  string public constant VERSION = "2.0.0";
   uint256 internal constant MAX_PENDING_WITHDRAWAL_TIMEOUT_SECONDS = 30 days;
   uint256 internal constant MAX_FEE_PPM = 5e4;
   uint256 internal constant FIXED_PAYMENT_MULTIPLIER = 1e15;
-  uint256 internal constant JOB_RUN_GAS_OVERHEAD = 30_000;
+  uint256 internal constant JOB_RUN_GAS_OVERHEAD = 40_000;
 
-  uint8 internal constant CALLDATA_SOURCE_SELECTOR = 0;
-  uint8 internal constant CALLDATA_SOURCE_PRE_DEFINED = 1;
-  uint8 internal constant CALLDATA_SOURCE_RESOLVER = 2;
+  enum CalldataSourceType {
+    SELECTOR,
+    PRE_DEFINED,
+    RESOLVER
+  }
 
   IERC20 public immutable CVP;
 
@@ -79,21 +83,22 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     uint256 baseFee,
     uint256 gasPrice,
     uint256 compensation,
-    uint256 binJobAfter
+    bytes32 binJobAfter
   );
   event WithdrawFees(address indexed to, uint256 amount);
-  event Slash(uint256 indexed keeperId, address to, uint256 slashAmount);
-  event RegisterAsKeeper(uint256 indexed keeperId, address indexed keeperAdmin, address keeperWorker);
+  event Slash(uint256 indexed keeperId, address indexed to, uint256 currentAmount, uint256 pendingAmount);
+  event RegisterAsKeeper(uint256 indexed keeperId, address indexed keeperAdmin, address indexed keeperWorker);
   event SetWorkerAddress(uint256 indexed keeperId, address indexed worker);
   event Stake(uint256 indexed keeperId, uint256 amount, address staker, address receiver);
   event InitiateRedeem(uint256 indexed keeperId, uint256 redeemAmount, uint256 stakeAmount, uint256 slashedStakeAmount);
   event FinalizeRedeem(uint256 indexed keeperId, address indexed beneficiary, uint256 amount);
   event WithdrawCompensation(uint256 indexed keeperId, address indexed to, uint256 amount);
   event DepositJobCredits(bytes32 indexed jobKey, address indexed depositor, uint256 amount, uint256 fee);
-  event WithdrawJobCredits(bytes32 indexed jobKey, address indexed owner, address indexed to, uint96 amount);
+  event WithdrawJobCredits(bytes32 indexed jobKey, address indexed owner, address indexed to, uint256 amount);
   event DepositJobOwnerCredits(address indexed jobOwner, address indexed depositor, uint256 amount, uint256 fee);
   event WithdrawJobOwnerCredits(address indexed jobOwner, address indexed to, uint256 amount);
-  event JobTransfer(bytes32 indexed jobKey, address indexed from, address indexed to);
+  event InitiateJobTransfer(bytes32 indexed jobKey, address indexed from, address indexed to);
+  event AcceptJobTransfer(bytes32 indexed jobKey_, address indexed to_);
   event SetJobConfig(bytes32 indexed jobKey, bool isActive_, bool useJobOwnerCredits_, bool assertResolverSelector_);
   event SetJobResolver(bytes32 indexed jobKey, address resolverAddress, bytes resolverCalldata);
   event SetJobPreDefinedCalldata(bytes32 indexed jobKey, bytes preDefinedCalldata);
@@ -105,7 +110,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     bool useJobOwnerCredits,
     address owner,
     uint256 jobMinCvp,
-    uint256 maxBaseFee,
+    uint256 maxBaseFeeGwei,
     uint256 rewardPct,
     uint256 fixedReward,
     uint256 calldataSource
@@ -143,22 +148,24 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     uint96 cvpStake;
   }
 
-  uint256 public minKeeperCvp;
-  uint256 public pendingWithdrawalTimeoutSeconds;
-  uint256 public feeTotal;
-  uint256 public feePpm;
+  uint256 internal minKeeperCvp;
+  uint256 internal pendingWithdrawalTimeoutSeconds;
+  uint256 internal feeTotal;
+  uint256 internal feePpm;
   uint256 internal nextKeeperId;
 
   // keccak256(jobAddress, id) => ethBalance
   mapping(bytes32 => Job) internal jobs;
   // keccak256(jobAddress, id) => customCalldata
-  mapping(bytes32 => bytes) public preDefinedCalldatas;
+  mapping(bytes32 => bytes) internal preDefinedCalldatas;
   // keccak256(jobAddress, id) => minKeeperCvpStake
-  mapping(bytes32 => uint256) public jobMinKeeperCvp;
+  mapping(bytes32 => uint256) internal jobMinKeeperCvp;
   // keccak256(jobAddress, id) => owner
-  mapping(bytes32 => address) public jobOwners;
+  mapping(bytes32 => address) internal jobOwners;
   // keccak256(jobAddress, id) => resolver(address,calldata)
   mapping(bytes32 => Resolver) internal resolvers;
+  // keccak256(jobAddress, id) => pendingAddress
+  mapping(bytes32 => address) internal jobPendingTransfers;
 
   // jobAddress => nextIdToRegister(actually uint24)
   mapping(address => uint256) public jobNextIds;
@@ -166,16 +173,16 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   // keeperId => (worker,CVP stake)
   mapping(uint256 => Keeper) internal keepers;
   // keeperId => admin
-  mapping(uint256 => address) public keeperAdmins;
+  mapping(uint256 => address) internal keeperAdmins;
   // keeperId => the slashed CVP amount
-  mapping(uint256 => uint256) public slashedStakeOf;
+  mapping(uint256 => uint256) internal slashedStakeOf;
   // keeperId => native token compensation
-  mapping(uint256 => uint256) public compensations;
+  mapping(uint256 => uint256) internal compensations;
 
   // keeperId => pendingWithdrawalCVP amount
-  mapping(uint256 => uint256) public pendingWithdrawalAmount;
+  mapping(uint256 => uint256) internal pendingWithdrawalAmounts;
   // keeperId => pendingWithdrawalEndsAt timestamp
-  mapping(uint256 => uint256) public pendingWithdrawalEndsAt;
+  mapping(uint256 => uint256) internal pendingWithdrawalEndsAt;
 
   // owner => credits
   mapping(address => uint256) public jobOwnerCredits;
@@ -212,8 +219,8 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     }
   }
 
-  function _assertJobCalldataSource(bytes32 jobKey_, uint8 source_) internal view {
-    if (jobs[jobKey_].calldataSource != source_) {
+  function _assertJobCalldataSource(bytes32 jobKey_, CalldataSourceType source_) internal view {
+    if (CalldataSourceType(jobs[jobKey_].calldataSource) != source_) {
       revert NotSupportedByJobCalldataSource();
     }
   }
@@ -228,16 +235,16 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     }
   }
 
-  function _assertInterval(uint256 interval_, uint256 calldataSource_) internal pure {
+  function _assertInterval(uint256 interval_, CalldataSourceType calldataSource_) internal pure {
     if (interval_ == 0 &&
-      (calldataSource_ == CALLDATA_SOURCE_SELECTOR || calldataSource_ == CALLDATA_SOURCE_PRE_DEFINED)) {
+      (calldataSource_ == CalldataSourceType.SELECTOR || calldataSource_ == CalldataSourceType.PRE_DEFINED)) {
       revert JobShouldHaveInterval();
     }
   }
 
   constructor(address owner_, address cvp_, uint256 minKeeperCvp_, uint256 pendingWithdrawalTimeoutSeconds_)
-    ERC20("PPAgentLite Staked CVP", "paCVP")
-    ERC20Permit("PPAgentLite Staked CVP")
+    ERC20("PPAgentV2 Staked CVP", "paCVP")
+    ERC20Permit("PPAgentV2 Staked CVP")
   {
     minKeeperCvp = minKeeperCvp_;
     CVP = IERC20(cvp_);
@@ -258,6 +265,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    *  bits    0-3      4-23                                     24-26  27-27  28-30     31+
    */
   function execute_44g58pv() external {
+    uint256 gasStart = gasleft();
     bytes32 jobKey;
 
     assembly ("memory-safe") {
@@ -265,10 +273,8 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
       let size := 23
 
       // keccack256(address+id(uint24)) to memory to generate jobKey
-      let ptr := mload(0x40)
-      mstore(0x40, add(ptr, size))
-      calldatacopy(ptr, 4, size)
-      jobKey := keccak256(ptr, size)
+      calldatacopy(0, 4, size)
+      jobKey := keccak256(0, size)
     }
 
     address jobAddress;
@@ -297,11 +303,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
 
     // 1. Assert the job is active
     {
-      bool inactive;
-      assembly ("memory-safe") {
-        inactive := iszero(and(binJob, 0x0000000000000000000000000000000000000000000000000000000000000001))
-      }
-      if (inactive) {
+      if (!ConfigFlags.check(binJob, CFG_ACTIVE)) {
         revert InactiveJob(jobKey);
       }
     }
@@ -313,31 +315,27 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
 
     // 3. For interval job ensure the interval has passed
     {
-      bool intervalNotReached;
       uint256 intervalSeconds = (binJob << 32) >> 232;
-      uint256 lastExecutionAt;
 
-      assembly ("memory-safe") {
-        if gt(intervalSeconds, 0) {
-          lastExecutionAt := shr(224, binJob)
-          if gt(lastExecutionAt, 0) {
-            if gt(add(lastExecutionAt, intervalSeconds), timestamp()) {
-              intervalNotReached := true
-            }
+      if (intervalSeconds > 0) {
+        uint256 lastExecutionAt = binJob >> 224;
+        if (lastExecutionAt > 0) {
+          uint256 nextExecutionAt;
+          unchecked {
+            nextExecutionAt = lastExecutionAt + intervalSeconds;
+          }
+          if (nextExecutionAt > block.timestamp) {
+            revert IntervalNotReached(lastExecutionAt, intervalSeconds, block.timestamp);
           }
         }
-      }
-
-      if (intervalNotReached) {
-        revert IntervalNotReached(lastExecutionAt, intervalSeconds, block.timestamp);
       }
     }
 
     // 4. Ensure gas price fits base fee
     uint256 maxBaseFee;
     {
-      assembly {
-        maxBaseFee := mul(shr(240, shl(112, binJob)), 1000000000)
+      unchecked {
+        maxBaseFee = ((binJob << 112) >> 240)  * 1 gwei;
       }
       if (block.basefee > maxBaseFee && !ConfigFlags.check(cfg, FLAG_ACCEPT_MAX_BASE_FEE_LIMIT)) {
         revert BaseFeeGtGasPrice(block.basefee, maxBaseFee);
@@ -349,23 +347,22 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
       revert NonEOASender();
     }
 
-    // TODO: move up?
-    uint256 gasStart = gasleft();
     bool ok;
+    uint256 jobGas = gasleft() - 50_000;
 
     // Source: Selector
-    uint256 calldataSource = (binJob << 56) >> 248;
-    if (calldataSource == CALLDATA_SOURCE_SELECTOR) {
+    CalldataSourceType calldataSource = CalldataSourceType((binJob << 56) >> 248);
+    if (calldataSource == CalldataSourceType.SELECTOR) {
       bytes4 selector;
       assembly {
         selector := shl(224, shr(8, binJob))
       }
-      (ok,) = jobAddress.call(abi.encode(selector));
+      (ok,) = jobAddress.call{ gas: jobGas }(abi.encode(selector));
     // Source: Bytes
-    } else if (calldataSource == CALLDATA_SOURCE_PRE_DEFINED) {
-      (ok,) = jobAddress.call(preDefinedCalldatas[jobKey]);
+    } else if (calldataSource == CalldataSourceType.PRE_DEFINED) {
+      (ok,) = jobAddress.call{ gas: jobGas }(preDefinedCalldatas[jobKey]);
     // Source: Resolver
-    } else if (calldataSource == CALLDATA_SOURCE_RESOLVER) {
+    } else if (calldataSource == CalldataSourceType.RESOLVER) {
       assembly ("memory-safe") {
         let cdInCdSize := calldatasize()
         // calldata offset is 31
@@ -393,7 +390,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
           }
         }
         // The remaining gas could not be less than 50_000
-        ok := call(sub(gas(), 50000), jobAddress, 0, ptr, cdSize, 0x0, 0x0)
+        ok := call(jobGas, jobAddress, 0, ptr, cdSize, 0x0, 0x0)
       }
     } else {
       // Should never be reached
@@ -434,7 +431,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
             creditsAfter = creditsBefore - compensation;
           }
           // update job credits
-          binJob = binJob & BM_CLEAR_CREDITS ^ (creditsAfter << 40);
+          binJob = binJob & BM_CLEAR_CREDITS | (creditsAfter << 40);
           jobChanged = true;
         }
 
@@ -449,7 +446,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
           uint256 intervalSeconds = (binJob << 32) >> 232;
           if (intervalSeconds > 0) {
             uint256 lastExecutionAt = uint32(block.timestamp);
-            binJob = binJob & BM_CLEAR_LAST_UPDATE_AT ^ (lastExecutionAt << 224);
+            binJob = binJob & BM_CLEAR_LAST_UPDATE_AT | (lastExecutionAt << 224);
             jobChanged = true;
           }
         }
@@ -467,7 +464,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
         block.basefee,
         tx.gasprice,
         compensation,
-        binJob
+        bytes32(binJob)
       );
     // Tx reverted
     } else {
@@ -508,7 +505,6 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   struct RegisterJobParams {
     address jobAddress;
     bytes4 jobSelector;
-    address jobOwner;
     bool useJobOwnerCredits;
     bool assertResolverSelector;
     uint16 maxBaseFeeGwei;
@@ -556,47 +552,52 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
       revert MissingJobAddress();
     }
 
-    _assertInterval(params_.intervalSeconds, params_.calldataSource);
-    _assertJobParams(params_.maxBaseFeeGwei, params_.fixedReward, params_.rewardPct);
-    jobKey = getJobKey(params_.jobAddress, jobId);
-
-    if (params_.calldataSource == CALLDATA_SOURCE_PRE_DEFINED) {
-      _setJobPreDefinedCalldata(jobKey, preDefinedCalldata_);
-    } else if (params_.calldataSource == CALLDATA_SOURCE_RESOLVER) {
-      _setJobResolver(jobKey, resolver_);
-    }
     if (params_.calldataSource > 2) {
       revert InvalidCalldataSource();
     }
 
-    {
-      emit RegisterJob(
-        jobKey,
-        params_.jobAddress,
-        params_.jobSelector,
-        params_.useJobOwnerCredits,
-        params_.jobOwner,
-        params_.jobMinCvp,
-        params_.maxBaseFeeGwei,
-        params_.rewardPct,
-        params_.fixedReward,
-        params_.calldataSource
-      );
+    if (params_.jobAddress == address(CVP)) {
+      revert InvalidJobAddress();
+    }
 
+    _assertInterval(params_.intervalSeconds, CalldataSourceType(params_.calldataSource));
+    _assertJobParams(params_.maxBaseFeeGwei, params_.fixedReward, params_.rewardPct);
+    jobKey = getJobKey(params_.jobAddress, jobId);
+
+    emit RegisterJob(
+      jobKey,
+      params_.jobAddress,
+      params_.jobSelector,
+      params_.useJobOwnerCredits,
+      msg.sender,
+      params_.jobMinCvp,
+      params_.maxBaseFeeGwei,
+      params_.rewardPct,
+      params_.fixedReward,
+      params_.calldataSource
+    );
+
+    if (CalldataSourceType(params_.calldataSource) == CalldataSourceType.PRE_DEFINED) {
+      _setJobPreDefinedCalldata(jobKey, preDefinedCalldata_);
+    } else if (CalldataSourceType(params_.calldataSource) == CalldataSourceType.RESOLVER) {
+      _setJobResolver(jobKey, resolver_);
+    }
+
+    {
       bytes4 selector = 0x00000000;
-      if (params_.calldataSource != CALLDATA_SOURCE_PRE_DEFINED) {
+      if (CalldataSourceType(params_.calldataSource) != CalldataSourceType.PRE_DEFINED) {
         selector = params_.jobSelector;
       }
 
       uint256 config = CFG_ACTIVE;
       if (params_.useJobOwnerCredits) {
-        config = config ^ CFG_USE_JOB_OWNER_CREDITS;
+        config = config | CFG_USE_JOB_OWNER_CREDITS;
       }
       if (params_.assertResolverSelector) {
-        config = config ^ CFG_ASSERT_RESOLVER_SELECTOR;
+        config = config | CFG_ASSERT_RESOLVER_SELECTOR;
       }
       if (params_.jobMinCvp > 0) {
-        config = config ^ CFG_CHECK_KEEPER_MIN_CVP_DEPOSIT;
+        config = config | CFG_CHECK_KEEPER_MIN_CVP_DEPOSIT;
       }
 
       jobs[jobKey] = Job({
@@ -616,11 +617,11 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     }
 
     jobNextIds[params_.jobAddress] += 1;
-    jobOwners[jobKey] = params_.jobOwner;
+    jobOwners[jobKey] = msg.sender;
 
     if (msg.value > 0) {
       if (params_.useJobOwnerCredits) {
-        _processJobOwnerCreditsDeposit(params_.jobOwner);
+        _processJobOwnerCreditsDeposit(msg.sender);
       } else {
         _processJobCreditsDeposit(jobKey);
       }
@@ -656,7 +657,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
 
     Job memory job = jobs[jobKey_];
 
-    _assertInterval(intervalSeconds_, job.calldataSource);
+    _assertInterval(intervalSeconds_, CalldataSourceType(job.calldataSource));
 
     uint256 cfg = job.config;
 
@@ -686,7 +687,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    */
   function setJobResolver(bytes32 jobKey_, Resolver calldata resolver_) external {
     _assertOnlyJobOwner(jobKey_);
-    _assertJobCalldataSource(jobKey_, CALLDATA_SOURCE_RESOLVER);
+    _assertJobCalldataSource(jobKey_, CalldataSourceType.RESOLVER);
 
     _setJobResolver(jobKey_, resolver_);
   }
@@ -707,7 +708,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    */
   function setJobPreDefinedCalldata(bytes32 jobKey_, bytes calldata preDefinedCalldata_) external {
     _assertOnlyJobOwner(jobKey_);
-    _assertJobCalldataSource(jobKey_, CALLDATA_SOURCE_PRE_DEFINED);
+    _assertJobCalldataSource(jobKey_, CalldataSourceType.PRE_DEFINED);
 
     _setJobPreDefinedCalldata(jobKey_, preDefinedCalldata_);
   }
@@ -735,13 +736,13 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     uint256 newConfig = 0;
 
     if (isActive_) {
-      newConfig = newConfig ^ CFG_ACTIVE;
+      newConfig = newConfig | CFG_ACTIVE;
     }
     if (useJobOwnerCredits_) {
-      newConfig = newConfig ^ CFG_USE_JOB_OWNER_CREDITS;
+      newConfig = newConfig | CFG_USE_JOB_OWNER_CREDITS;
     }
     if (assertResolverSelector_) {
-      newConfig = newConfig ^ CFG_ASSERT_RESOLVER_SELECTOR;
+      newConfig = newConfig | CFG_ASSERT_RESOLVER_SELECTOR;
     }
 
     uint256 job = getJobRaw(jobKey_) & BM_CLEAR_CONFIG | newConfig;
@@ -751,24 +752,39 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
   }
 
   function _updateRawJob(bytes32 jobKey_, uint256 job_) internal {
+    Job storage job = jobs[jobKey_];
     assembly {
-      mstore(0, jobKey_)
-      // DANGER: ensure 0x0b still matches jobs position if storage layout changes
-      mstore(32, 0x0d)
-      sstore(keccak256(0, 0x40), job_)
+      sstore(job.slot, job_)
     }
   }
 
   /**
-   * A job owner transfer the job to a new owner.
+   * A job owner initiates the job transfer to a new owner.
+   * The actual owner doesn't update until the pending owner accepts the transfer.
    *
    * @param jobKey_ The jobKey
    * @param to_ The new job owner
    */
-  function transferJob(bytes32 jobKey_, address to_) external {
+  function initiateJobTransfer(bytes32 jobKey_, address to_) external {
     _assertOnlyJobOwner(jobKey_);
-    jobOwners[jobKey_] = to_;
-    emit JobTransfer(jobKey_, msg.sender, to_);
+    jobPendingTransfers[jobKey_] = to_;
+    emit InitiateJobTransfer(jobKey_, msg.sender, to_);
+  }
+
+  /**
+   * A pending job owner accepts the job transfer.
+   *
+   * @param jobKey_ The jobKey
+   */
+  function acceptJobTransfer(bytes32 jobKey_) external {
+    if (msg.sender != jobPendingTransfers[jobKey_]) {
+      revert OnlyPendingOwner();
+    }
+
+    jobOwners[jobKey_] = msg.sender;
+    delete jobPendingTransfers[jobKey_];
+
+    emit AcceptJobTransfer(jobKey_, msg.sender);
   }
 
   /**
@@ -811,26 +827,30 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    *
    * @param jobKey_ The jobKey
    * @param to_ The address to send NATIVE tokens to
-   * @param amount_ The amount to withdraw
+   * @param amount_ The amount to withdraw. Use type(uint256).max for the total available credits withdrawal.
    */
   function withdrawJobCredits(
     bytes32 jobKey_,
     address payable to_,
-    uint88 amount_
+    uint256 amount_
   ) external {
+    uint88 creditsBefore = jobs[jobKey_].credits;
+    if (amount_ == type(uint256).max) {
+      amount_ = creditsBefore;
+    }
+
     _assertOnlyJobOwner(jobKey_);
     _assertNonZeroAmount(amount_);
 
-    uint88 creditsBefore = jobs[jobKey_].credits;
     if (creditsBefore < amount_) {
       revert CreditsWithdrawalUnderflow();
     }
 
     unchecked {
-      jobs[jobKey_].credits = creditsBefore - amount_;
+      jobs[jobKey_].credits = creditsBefore - uint88(amount_);
     }
 
-    to_.transfer(uint256(amount_));
+    to_.transfer(amount_);
 
     emit WithdrawJobCredits(jobKey_, msg.sender, to_, amount_);
   }
@@ -861,12 +881,16 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    * A job owner withdraws the job owner credits in NATIVE tokens.
    *
    * @param to_ The address to send NATIVE tokens to
-   * @param amount_ The amount to withdraw
+   * @param amount_ The amount to withdraw. Use type(uint256).max for the total available credits withdrawal.
    */
   function withdrawJobOwnerCredits(address payable to_, uint256 amount_) external {
+    uint256 creditsBefore = jobOwnerCredits[msg.sender];
+    if (amount_ == type(uint256).max) {
+      amount_ = creditsBefore;
+    }
+
     _assertNonZeroAmount(amount_);
 
-    uint256 creditsBefore = jobOwnerCredits[msg.sender];
     if (creditsBefore < amount_) {
       revert CreditsWithdrawalUnderflow();
     }
@@ -925,13 +949,17 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    *
    * @param keeperId_ The keeper ID
    * @param to_ The address to withdraw to
-   * @param amount_ The amount to withdraw
+   * @param amount_ The amount to withdraw. Use type(uint256).max for the total available compensation withdrawal.
    */
   function withdrawCompensation(uint256 keeperId_, address payable to_, uint256 amount_) external {
+    uint256 available = compensations[keeperId_];
+    if (amount_ == type(uint256).max) {
+      amount_ = available;
+    }
+
     _assertNonZeroAmount(amount_);
     _assertOnlyKeeperAdmin(keeperId_);
 
-    uint256 available = compensations[keeperId_];
     if (amount_ > available) {
       revert WithdrawAmountExceedsAvailable(amount_, available);
     }
@@ -1003,7 +1031,7 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     unchecked {
       stakeOfToReduceAmount = amount_ - slashedStakeOfBefore;
       keepers[keeperId_].cvpStake = uint96(stakeOfBefore - stakeOfToReduceAmount);
-      pendingWithdrawalAmount[keeperId_] += stakeOfToReduceAmount;
+      pendingWithdrawalAmounts[keeperId_] += stakeOfToReduceAmount;
     }
 
     pendingWithdrawalAfter = block.timestamp + pendingWithdrawalTimeoutSeconds;
@@ -1026,12 +1054,12 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
       revert WithdrawalTimoutNotReached();
     }
 
-    redeemedCvp = pendingWithdrawalAmount[keeperId_];
+    redeemedCvp = pendingWithdrawalAmounts[keeperId_];
     if (redeemedCvp == 0) {
       revert NoPendingWithdrawal();
     }
 
-    pendingWithdrawalAmount[keeperId_] = 0;
+    pendingWithdrawalAmounts[keeperId_] = 0;
     CVP.transfer(to_, redeemedCvp);
 
     emit FinalizeRedeem(keeperId_, to_, redeemedCvp);
@@ -1044,18 +1072,26 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    *
    * @param keeperId_ The keeper ID to slash
    * @param to_ The address to send the slashed CVP to
-   * @param amount_ The slash amount
+   * @param currentAmount_ The amount to slash from the current keeper.cvpStake balance
+   * @param pendingAmount_ The amount to slash from the pendingWithdrawals balance
    */
-  function slash(uint256 keeperId_, address to_, uint256 amount_) external {
+  function slash(uint256 keeperId_, address to_, uint256 currentAmount_, uint256 pendingAmount_) external {
     _assertOnlyOwner();
-    _assertNonZeroAmount(amount_);
+    uint256 totalAmount = currentAmount_ + pendingAmount_;
+    _assertNonZeroAmount(totalAmount);
 
-    keepers[keeperId_].cvpStake -= uint96(amount_);
-    slashedStakeOf[keeperId_] += amount_;
+    if (currentAmount_ > 0) {
+      keepers[keeperId_].cvpStake -= uint96(currentAmount_);
+      slashedStakeOf[keeperId_] += currentAmount_;
+    }
 
-    CVP.transfer(to_, amount_);
+    if (pendingAmount_ > 0) {
+      pendingWithdrawalAmounts[keeperId_] -= pendingAmount_;
+    }
 
-    emit Slash(keeperId_, to_, amount_);
+    CVP.transfer(to_, totalAmount);
+
+    emit Slash(keeperId_, to_, currentAmount_, pendingAmount_);
   }
 
   /**
@@ -1125,20 +1161,62 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
     }
   }
 
-  function keeperInfo(uint256 keeperId_) external view returns (Keeper memory) {
-    return keepers[keeperId_];
+  function getConfig()
+    external view returns (
+      uint256 minKeeperCvp_,
+      uint256 pendingWithdrawalTimeoutSeconds_,
+      uint256 feeTotal_,
+      uint256 feePpm_
+    )
+  {
+    return (
+      minKeeperCvp,
+      pendingWithdrawalTimeoutSeconds,
+      feeTotal,
+      feePpm
+    );
   }
 
-  function stakeOf(uint256 keeperId_) public view returns (uint256) {
-    return keepers[keeperId_].cvpStake;
+  function getKeeper(uint256 keeperId_)
+    external view returns (
+      address admin,
+      address worker,
+      uint256 currentStake,
+      uint256 slashedStake,
+      uint256 compensation,
+      uint256 pendingWithdrawalAmount,
+      uint256 pendingWithdrawalEndAt
+    )
+  {
+    return (
+      keeperAdmins[keeperId_],
+      keepers[keeperId_].worker,
+      keepers[keeperId_].cvpStake,
+      slashedStakeOf[keeperId_],
+      compensations[keeperId_],
+      pendingWithdrawalAmounts[keeperId_],
+      pendingWithdrawalEndsAt[keeperId_]
+    );
   }
 
-  function getResolver(bytes32 jobKey_) external view returns (Resolver memory) {
-    return resolvers[jobKey_];
-  }
-
-  function getJob(bytes32 jobKey_) external view returns (Job memory) {
-    return jobs[jobKey_];
+  function getJob(bytes32 jobKey_)
+    external view returns (
+      address owner,
+      address pendingTransfer,
+      uint256 jobLevelMinKeeperCvp,
+      Job memory details,
+      bytes memory preDefinedCalldata,
+      Resolver memory resolver
+    )
+  {
+    return (
+      jobOwners[jobKey_],
+      jobPendingTransfers[jobKey_],
+      jobMinKeeperCvp[jobKey_],
+      jobs[jobKey_],
+      preDefinedCalldatas[jobKey_],
+      resolvers[jobKey_]
+    );
   }
 
   /**
@@ -1154,11 +1232,9 @@ contract PPAgentV2 is IPPAgentV2, PPAgentV2Flags, Ownable, ERC20, ERC20Permit  {
    *  bits    0-3        4-6      7-7            8-11        12-13     14-15          16-26                  27-30    31-31
    */
   function getJobRaw(bytes32 jobKey_) public view returns (uint256 rawJob) {
+    Job storage job = jobs[jobKey_];
     assembly {
-      mstore(0, jobKey_)
-      // DANGER: ensure 0x0b still matches jobs position if storage layout changes
-      mstore(32, 0x0d)
-      rawJob := sload(keccak256(0, 0x40))
+      rawJob := sload(job.slot)
     }
   }
 

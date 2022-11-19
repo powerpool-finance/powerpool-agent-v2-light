@@ -12,8 +12,6 @@ import "./jobs/ComplexCalldataTestJob.sol";
 import "./jobs/SimpleCalldataIntervalTestJob.sol";
 
 contract ExecuteResolverTest is TestHelper {
-  MockCVP internal cvp;
-  PPAgentV2 internal agent;
   ICounter internal job;
 
   bytes32 internal jobKey;
@@ -23,7 +21,6 @@ contract ExecuteResolverTest is TestHelper {
 
   function setUp() public override {
     defaultFlags = _config({
-      checkCredits: false,
       acceptMaxBaseFeeLimit: false,
       accrueReward: false
     });
@@ -49,7 +46,6 @@ contract ExecuteResolverTest is TestHelper {
     PPAgentV2.RegisterJobParams memory params = PPAgentV2.RegisterJobParams({
       jobAddress: job_,
       jobSelector: selector_,
-      jobOwner: alice,
       maxBaseFeeGwei: 100,
       rewardPct: 35,
       fixedReward: 10,
@@ -61,6 +57,8 @@ contract ExecuteResolverTest is TestHelper {
       calldataSource: CALLDATA_SOURCE_RESOLVER,
       intervalSeconds: 0
     });
+    vm.prank(alice);
+    vm.deal(alice, 1 ether);
     (jobKey,jobId) = agent.registerJob{ value: 1 ether }({
       params_: params,
       resolver_: resolver,
@@ -275,7 +273,7 @@ contract ExecuteResolverTest is TestHelper {
   // INTERVAL
 
   function testErrExecResolverTooEarly() public {
-    job = new SimpleCalldataIntervalTestJob(address(agent));
+    job = new SimpleCalldataIntervalTestJob(address(agent), 30);
     assertEq(job.current(), 0);
     _setupJob(address(job), SimpleCalldataIntervalTestJob.increment.selector, false);
 

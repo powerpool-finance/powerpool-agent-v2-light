@@ -6,9 +6,9 @@ import "./mocks/MockCVP.sol";
 import "./TestHelper.sol";
 
 contract StakingTest is TestHelper {
-  MockCVP internal cvp;
-  PPAgentV2 internal agent;
   uint256 internal kid;
+
+  event Slash(uint256 indexed keeperId, address indexed to, uint256 currentAmount, uint256 pendingAmount);
 
   function setUp() public override {
     cvp = new MockCVP();
@@ -23,45 +23,132 @@ contract StakingTest is TestHelper {
 
   function testErrSlashNotOwner() public {
     vm.expectRevert(PPAgentV2.OnlyOwner.selector);
-    agent.slash(kid, bob, 1);
+    agent.slash(kid, bob, 1, 0);
   }
 
-  function testErrSlashZeroAmount() public {
+  function testErrSlashZeroTotalAmount() public {
     vm.expectRevert(
       abi.encodeWithSelector(PPAgentV2.MissingAmount.selector)
     );
     vm.prank(owner);
-    agent.slash(kid, bob, 0);
+    agent.slash(kid, bob, 0, 0);
   }
 
   function testFailNonExistentKeeper() public {
     vm.prank(owner);
-    agent.slash(999, bob, 1); // fails
+    agent.slash(999, bob, 1, 0); // fails
   }
 
   function testSlashPartOfTheDeposit() public {
-    vm.prank(keeperAdmin);
-
     assertEq(agent.balanceOf(keeperAdmin), 6_000 ether);
-    assertEq(agent.stakeOf(kid), 3_000 ether);
-    assertEq(agent.slashedStakeOf(kid), 0);
+    assertEq(_stakeOf(kid), 3_000 ether);
+    assertEq(_slashedStakeOf(kid), 0);
     assertEq(cvp.balanceOf(keeperAdmin), 10_000 ether);
     assertEq(cvp.balanceOf(address(agent)), 6_000 ether);
 
     vm.prank(owner);
-    agent.slash(kid, bob, 500 ether);
+    agent.slash(kid, bob, 500 ether, 0);
 
     assertEq(agent.balanceOf(keeperAdmin), 6_000 ether);
-    assertEq(agent.stakeOf(kid), 2_500 ether);
-    assertEq(agent.slashedStakeOf(kid), 500 ether);
+    assertEq(_stakeOf(kid), 2_500 ether);
+    assertEq(_slashedStakeOf(kid), 500 ether);
     assertEq(cvp.balanceOf(keeperAdmin), 10_000 ether);
     assertEq(cvp.balanceOf(address(agent)), 5_500 ether);
     assertEq(cvp.balanceOf(bob), 500 ether);
   }
 
+  function testSlashFullDepositAndPendingWithdrawal() public {
+    assertEq(agent.balanceOf(keeperAdmin), 6_000 ether);
+    assertEq(_stakeOf(kid), 3_000 ether);
+    assertEq(_slashedStakeOf(kid), 0);
+    assertEq(_pendingWithdrawalAmountOf(kid), 0);
+    assertEq(cvp.balanceOf(keeperAdmin), 10_000 ether);
+    assertEq(cvp.balanceOf(address(agent)), 6_000 ether);
+
+    vm.prank(keeperAdmin);
+    agent.initiateRedeem(kid, 2_000 ether);
+
+    assertEq(_pendingWithdrawalAmountOf(kid), 2_000 ether);
+
+    uint256 bobBalanceBefore = cvp.balanceOf(bob);
+    uint256 agentBalanceBefore = cvp.balanceOf(address(agent));
+
+    vm.expectEmit(true, true, false, true, address(agent));
+    emit Slash(kid, bob, 1_000 ether, 2_000 ether);
+
+    vm.prank(owner);
+    agent.slash(kid, bob, 1_000 ether, 2_000 ether);
+
+    assertEq(agent.balanceOf(keeperAdmin), 4_000 ether);
+    assertEq(_pendingWithdrawalAmountOf(kid), 0);
+    assertEq(_stakeOf(kid), 0);
+    assertEq(_slashedStakeOf(kid), 1_000 ether);
+    assertEq(cvp.balanceOf(keeperAdmin), 10_000 ether);
+
+    assertEq(cvp.balanceOf(bob) - bobBalanceBefore, 3_000 ether);
+    assertEq(agentBalanceBefore - cvp.balanceOf(address(agent)), 3_000 ether);
+  }
+
+  function testSlashPartialDepositAndPendingWithdrawal() public {
+    assertEq(agent.balanceOf(keeperAdmin), 6_000 ether);
+    assertEq(_stakeOf(kid), 3_000 ether);
+    assertEq(_slashedStakeOf(kid), 0);
+    assertEq(_pendingWithdrawalAmountOf(kid), 0);
+    assertEq(cvp.balanceOf(keeperAdmin), 10_000 ether);
+    assertEq(cvp.balanceOf(address(agent)), 6_000 ether);
+
+    vm.prank(keeperAdmin);
+    agent.initiateRedeem(kid, 2_000 ether);
+
+    assertEq(_pendingWithdrawalAmountOf(kid), 2_000 ether);
+
+    uint256 bobBalanceBefore = cvp.balanceOf(bob);
+    uint256 agentBalanceBefore = cvp.balanceOf(address(agent));
+
+    vm.expectEmit(true, true, false, true, address(agent));
+    emit Slash(kid, bob, 700 ether, 600 ether);
+
+    vm.prank(owner);
+    agent.slash(kid, bob, 700 ether, 600 ether);
+
+    assertEq(agent.balanceOf(keeperAdmin), 4_000 ether);
+    assertEq(_pendingWithdrawalAmountOf(kid), 1_400 ether);
+    assertEq(_stakeOf(kid), 300 ether);
+    assertEq(_slashedStakeOf(kid), 700 ether);
+    assertEq(cvp.balanceOf(keeperAdmin), 10_000 ether);
+
+    assertEq(cvp.balanceOf(bob) - bobBalanceBefore, 1_300 ether);
+    assertEq(agentBalanceBefore - cvp.balanceOf(address(agent)), 1_300 ether);
+  }
+
+  function testSlashPendingWithdrawal() public {
+    vm.prank(keeperAdmin);
+    agent.initiateRedeem(kid, 2_000 ether);
+
+    assertEq(_pendingWithdrawalAmountOf(kid), 2_000 ether);
+
+    uint256 bobBalanceBefore = cvp.balanceOf(bob);
+    uint256 agentBalanceBefore = cvp.balanceOf(address(agent));
+
+    vm.expectEmit(true, true, false, true, address(agent));
+    emit Slash(kid, bob, 0, 1_900 ether);
+
+    vm.prank(owner);
+    agent.slash(kid, bob, 0, 1_900 ether);
+
+    assertEq(agent.balanceOf(keeperAdmin), 4_000 ether);
+    assertEq(_pendingWithdrawalAmountOf(kid), 100 ether);
+    assertEq(_stakeOf(kid), 1000 ether);
+    assertEq(_slashedStakeOf(kid), 0);
+    assertEq(cvp.balanceOf(keeperAdmin), 10_000 ether);
+
+    assertEq(cvp.balanceOf(bob) - bobBalanceBefore, 1_900 ether);
+    assertEq(agentBalanceBefore - cvp.balanceOf(address(agent)), 1_900 ether);
+  }
+
   function testErrWontRedeemLtPartiallySlashed() public {
     vm.prank(owner);
-    agent.slash(kid, bob, 500 ether);
+    agent.slash(kid, bob, 500 ether, 0);
 
     // Wont burn
     vm.expectRevert(
@@ -73,14 +160,14 @@ contract StakingTest is TestHelper {
 
   function testRedeemExactPartiallySlashed() public {
     vm.prank(owner);
-    agent.slash(kid, bob, 500 ether);
+    agent.slash(kid, bob, 500 ether, 0);
 
     vm.prank(keeperAdmin);
     agent.initiateRedeem(kid, 500 ether);
 
     assertEq(agent.balanceOf(keeperAdmin), 5_500 ether);
-    assertEq(agent.stakeOf(kid), 2_500 ether);
-    assertEq(agent.slashedStakeOf(kid), 0);
+    assertEq(_stakeOf(kid), 2_500 ether);
+    assertEq(_slashedStakeOf(kid), 0);
     assertEq(cvp.balanceOf(keeperAdmin), 10_000 ether);
     assertEq(cvp.balanceOf(address(agent)), 5_500 ether);
 
@@ -94,33 +181,33 @@ contract StakingTest is TestHelper {
 
   function testRedeemGtPartiallySlashed() public {
     vm.prank(owner);
-    agent.slash(kid, bob, 500 ether);
+    agent.slash(kid, bob, 500 ether, 0);
 
     vm.prank(keeperAdmin);
     agent.initiateRedeem(kid, 600 ether);
 
     assertEq(agent.balanceOf(keeperAdmin), 5_400 ether);
-    assertEq(agent.stakeOf(kid), 2_400 ether);
-    assertEq(agent.slashedStakeOf(kid), 0);
+    assertEq(_stakeOf(kid), 2_400 ether);
+    assertEq(_slashedStakeOf(kid), 0);
     assertEq(cvp.balanceOf(keeperAdmin), 10_000 ether);
     assertEq(cvp.balanceOf(address(agent)), 5_500 ether);
-    assertEq(agent.pendingWithdrawalAmount(kid), 100 ether);
+    assertEq(_pendingWithdrawalAmountOf(kid), 100 ether);
 
     vm.warp(block.timestamp + 3 days + 1);
     vm.prank(keeperAdmin);
     agent.finalizeRedeem(kid, keeperAdmin);
 
     assertEq(agent.balanceOf(keeperAdmin), 5_400 ether);
-    assertEq(agent.stakeOf(kid), 2_400 ether);
-    assertEq(agent.slashedStakeOf(kid), 0);
-    assertEq(agent.pendingWithdrawalAmount(kid), 0);
+    assertEq(_stakeOf(kid), 2_400 ether);
+    assertEq(_slashedStakeOf(kid), 0);
+    assertEq(_pendingWithdrawalAmountOf(kid), 0);
     assertEq(cvp.balanceOf(keeperAdmin), 10_000 ether + 100 ether);
     assertEq(cvp.balanceOf(address(agent)), 5_400 ether);
   }
 
   function testErrWontRedeemLtFullySlashed() public {
     vm.prank(owner);
-    agent.slash(kid, bob, 3_000 ether);
+    agent.slash(kid, bob, 3_000 ether, 0);
 
     // Wont burn
     vm.expectRevert(
@@ -132,14 +219,14 @@ contract StakingTest is TestHelper {
 
   function testRedeemFullySlashed() public {
     vm.prank(owner);
-    agent.slash(kid, bob, 3_000 ether);
+    agent.slash(kid, bob, 3_000 ether, 0);
 
     vm.prank(keeperAdmin);
     agent.initiateRedeem(kid, 3_000 ether);
 
     assertEq(agent.balanceOf(keeperAdmin), 3_000 ether);
-    assertEq(agent.stakeOf(kid), 0);
-    assertEq(agent.slashedStakeOf(kid), 0 ether);
+    assertEq(_stakeOf(kid), 0);
+    assertEq(_slashedStakeOf(kid), 0 ether);
     assertEq(cvp.balanceOf(keeperAdmin), 10_000 ether);
     assertEq(cvp.balanceOf(address(agent)), 3_000 ether);
 
