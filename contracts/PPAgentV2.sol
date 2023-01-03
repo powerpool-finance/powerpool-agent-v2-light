@@ -156,7 +156,7 @@ contract PPAgentV2 is IPPAgentV2Executor, IPPAgentV2Viewer, PPAgentV2Flags, Owna
   event SetJobConfig(bytes32 indexed jobKey, bool isActive_, bool useJobOwnerCredits_, bool assertResolverSelector_);
   event SetJobResolver(bytes32 indexed jobKey, address resolverAddress, bytes resolverCalldata);
   event SetJobPreDefinedCalldata(bytes32 indexed jobKey, bytes preDefinedCalldata);
-  event SetAgentParams(uint256 minKeeperCvp_, uint256 timeoutSeconds_, uint256 feePct_);
+  event SetAgentParams(uint256 minKeeperCvp_, uint256 timeoutSeconds_, uint256 feePpm_);
   event RegisterJob(
     bytes32 indexed jobKey,
     address indexed jobAddress,
