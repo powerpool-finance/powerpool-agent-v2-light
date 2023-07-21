@@ -1,4 +1,6 @@
-# PowerPool Agent V2
+# PowerPool Agent V2 Light
+
+WARNING: The previous version of PowerPool Agent V2 v2.2.0, now referred to as `light`, has been temporarily deprecated in favor of the `randao` version. We plan to reintroduce support for it in the future. You can find `randao` version here https://github.com/powerpool-finance/powerpool-agent-v2.
 
 ## How to run tests
 
